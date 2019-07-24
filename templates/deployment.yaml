@@ -20,10 +20,14 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+    {{- with .Values.etchosts }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.image.frappe.repository }}:{{ .Values.image.frappe.tag }}"
+          imagePullPolicy: {{ .Values.image.frappe.pullPolicy }}
           ports:
             - name: http
               containerPort: 8000
@@ -33,14 +37,37 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /api/resource/User
               port: http
           readinessProbe:
             httpGet:
-              path: /
+              path: /api/resource/User
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+        {{- if .Values.image.monitoring.enabled }}
+        - name: {{ .Chart.Name }}-monitor
+          image: "{{ .Values.image.monitoring.repository }}:{{ .Values.image.monitoring.tag }}"
+          imagePullPolicy: {{ .Values.image.monitoring.pullPolicy }}
+          ports:
+            - name: monitor
+              containerPort: {{ .Values.image.monitoring.port }}
+              protocol: {{ .Values.image.monitoring.protocol | default TCP }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

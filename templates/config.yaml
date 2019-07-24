@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-server-config
+data:
+  db.host: {{ .Release.Name }}-db-ntex-com
+  db.name: {{ .Values.site.dbname }}

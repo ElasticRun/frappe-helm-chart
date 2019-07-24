@@ -2,12 +2,28 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# Number of PODs to be started
 replicaCount: 1
 
+# Image details
 image:
-  repository: nginx
-  tag: stable
-  pullPolicy: IfNotPresent
+  #Image to be used for frappe/erpnext based application
+  frappe:
+    # Image name (including the registry, if using private registry)
+    repository: dock.elasticrun.in/er-frappe11-base
+    # Image tag for the above image
+    tag: dev
+    # Pull policy for the image above.
+    pullPolicy: Always
+  # Image to be used for monitoring sidecar for frappe container.
+  monitoring:
+    #
+    enabled: false
+    repository:
+    tag:
+    pullPolicy:
+    port:
+    protocol:
 
 imagePullSecrets: []
 nameOverride: ""
@@ -16,6 +32,31 @@ fullnameOverride: ""
 service:
   type: ClusterIP
   port: 80
+
+db:
+  host: 192.168.1.13
+  port: 3306
+  rootPassword: password
+
+redis:
+  cache:
+    host:
+    port:
+  queue:
+    host:
+    port:
+  socketio:
+    host:
+    port:
+
+etchosts:
+  - ip: 10.61.0.4
+    hostnames:
+      - frappe.db.ntex.com
+
+site:
+  adminPassword: password
+  dbname: casdb
 
 ingress:
   enabled: false
