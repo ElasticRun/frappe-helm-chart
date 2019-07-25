@@ -4,6 +4,7 @@
 
 # Number of PODs to be started
 replicaCount: 1
+targetNamespace: default
 
 # Image details
 image:
@@ -24,6 +25,15 @@ image:
     pullPolicy:
     port:
     protocol:
+  fluentd:
+    enabled: true
+    repository: dock.elasticrun.in/er-fluentd
+    tag: dev
+    pullPolicy: Always
+    externalPort: 24224
+    elasticHost: elasticsearch-host
+    elasticPort: 9200
+    configMap: er-elk-beta-config
 
 imagePullSecrets: []
 nameOverride: ""

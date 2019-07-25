@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "er-frappe.fullname" . }}
+  namespace: {{ .Values.targetNamespace }}
   labels:
 {{ include "er-frappe.labels" . | indent 4 }}
 spec:

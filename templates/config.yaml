@@ -2,6 +2,31 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-server-config
+  namespace: {{ .Values.targetNamespace }}
 data:
   db.host: {{ .Release.Name }}-db-ntex-com
   db.name: {{ .Values.site.dbname }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-fluentd-config
+  namespace: {{ .Values.targetNamespace }}
+data:
+    fluent.conf: |
+    <source>
+    @type tail
+    path /fluentd/log/*.log
+    pos_file /home/frappe/td-agent/frappe-logs.pos
+    tag frappe.${file}
+    <parse>
+      @type none
+    </parse>
+    </source>
+    <match frappe.*>
+      @type elasticsearch
+      host {{ .Values.image.fluentd.elasticHost }}
+      port {{ .Values.image.fluentd.elasticPort }}
+      logstash_format false
+    </match>

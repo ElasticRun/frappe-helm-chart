@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ include "er-frappe.fullname" . }}
+  namespace: {{ .Values.targetNamespace }}
   labels:
 {{ include "er-frappe.labels" . | indent 4 }}
 spec:
@@ -35,6 +36,9 @@ spec:
             - name: socketio
               containerPort: 9000
               protocol: TCP
+            - name: filewatcher
+              containerPort: 6787
+              protocol: TCP
           livenessProbe:
             httpGet:
               path: /api/resource/User
@@ -43,8 +47,45 @@ spec:
             httpGet:
               path: /api/resource/User
               port: http
+          - containerPort: 6787
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                key: db.host
+                name: {{ .Release.Name }}-server-config
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                key: db.name
+                name: {{ .Release.Name }}-server-config
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: db.password
+                name: {{ .Release.Name }}-secrets
+          - name: ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin.password
+                name: {{ .Release.Name }}-secrets
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          stdin: true
+          tty: true
+          volumeMounts:
+            # Mount volume for sharing logs with fluentd - for publishing to central ELK
+            - mountPath: /home/frappe/docker-bench/logs
+              name: er-frappe-logs-dir
+            - mountPath: /home/frappe/docker-bench/sites/site1.docker
+              name: er-frappe-sites-vol
+              subPath: site1.docker
+            - mountPath: /home/frappe/docker-bench/sites/currentsite.txt
+              name: er-frappe-sites-vol
+              subPath: currentsite.txt
+            - mountPath: /home/frappe/docker-bench/sites/apps.txt
+              name: er-frappe-sites-vol
+              subPath: apps.txt
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -68,6 +109,22 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
         {{- end }}
+        {{- if .Values.image.fluentd.enabled }}
+        - name: {{ .Chart.Name }}-log-collector
+          image: "{{ .Values.image.fluentd.repository }}:{{ .Values.image.fluentd.tag }}"
+          imagePullPolicy: {{ .Values.image.fluentd.pullPolicy }}
+          ports:
+            - name: log-collector
+              containerPort: {{ .Values.image.fluentd.externalPort }}
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /fluentd/etc
+              name: er-frappe-fluentd-config-vol
+            - mountPath: /fluentd/log
+              name: er-frappe-logs-dir
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -80,3 +137,17 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+      volumes:
+        - name: er-frappe-sites-vol
+          persistentVolumeClaim:
+            claimName: er-frappe-sites-pvc
+        - name: er-frappe-fluentd-config-vol
+          configMap:
+            name : {{ .Release.Name }}-fluentd-config
+            items:
+            - key : fluent.conf
+              path: fluent.conf
+        # Volume used for sharing log files between fluentd and frappe containers.
+        # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
+        - name : er-frappe-logs-dir
+          emptyDir: {}
