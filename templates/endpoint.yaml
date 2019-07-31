@@ -1,0 +1,39 @@
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+ name: er-frappe-redis-cache
+  namespace: {{ .Values.targetNamespace }}
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+subsets:
+ - addresses:
+     - ip: {{ .Values.redis.cache.targetHost }}
+   ports:
+     - port: {{ .Values.redis.cache.targetPort }}
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+ name: er-frappe-redis-socketio
+  namespace: {{ .Values.targetNamespace }}
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+subsets:
+ - addresses:
+     - ip: {{ .Values.redis.socketio.targetHost }}
+   ports:
+     - port: {{ .Values.redis.socketio.targetPort }}
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+ name: er-frappe-redis-queue
+  namespace: {{ .Values.targetNamespace }}
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+subsets:
+ - addresses:
+     - ip: {{ .Values.redis.queue.targetHost }}
+   ports:
+     - port: {{ .Values.redis.queue.targetPort }}

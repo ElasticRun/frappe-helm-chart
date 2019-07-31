@@ -6,6 +6,18 @@ metadata:
 data:
   db.host: {{ .Release.Name }}-db-ntex-com
   db.name: {{ .Values.site.dbname }}
+  kafka.config: |
+    {
+      "auto.offset.reset": "smallest",
+      "bootstrap.servers": "{{ .Values.branch }}-spine.ntex.com:10180",
+      "client.id": {{ printf "%s-%s" .Release.Name "-spine-client" | quote }},
+      "default.topic.config": {
+        "acks": "all"
+      },
+      "fetch.message.max.bytes": "81920",
+      "group.id": {{ printf "%s-%s" .Release.Name "-spine-client-grp" | quote }},
+      "request.required.acks": "1"
+    }
 
 ---
 apiVersion: v1
@@ -16,17 +28,17 @@ metadata:
 data:
     fluent.conf: |
     <source>
-    @type tail
-    path /fluentd/log/*.log
-    pos_file /home/frappe/td-agent/frappe-logs.pos
-    tag frappe.${file}
-    <parse>
-      @type none
-    </parse>
+      @type tail
+      path /fluentd/log/*.log
+      pos_file /home/frappe/td-agent/frappe-logs.pos
+      tag frappe.${file}
+      <parse>
+        @type none
+      </parse>
     </source>
-    <match frappe.*>
+    <match frappe.**>
       @type elasticsearch
       host {{ .Values.image.fluentd.elasticHost }}
       port {{ .Values.image.fluentd.elasticPort }}
-      logstash_format false
+      logstash_format true
     </match>

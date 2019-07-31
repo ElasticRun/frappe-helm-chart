@@ -27,14 +27,11 @@ spec:
     {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.frappe.repository }}:{{ .Values.image.frappe.tag }}"
-          imagePullPolicy: {{ .Values.image.frappe.pullPolicy }}
+          image: "{{ .Values.image.frappe-app.repository }}:{{ .Values.branch }}"
+          imagePullPolicy: {{ .Values.image.frappe-app.pullPolicy }}
           ports:
-            - name: http
+            - name: nginx
               containerPort: 8000
-              protocol: TCP
-            - name: socketio
-              containerPort: 9000
               protocol: TCP
             - name: filewatcher
               containerPort: 6787
@@ -47,57 +44,49 @@ spec:
             httpGet:
               path: /api/resource/User
               port: http
-          - containerPort: 6787
-        env:
-          - name: DB_HOST
-            valueFrom:
-              configMapKeyRef:
-                key: db.host
-                name: {{ .Release.Name }}-server-config
-          - name: DB_NAME
-            valueFrom:
-              configMapKeyRef:
-                key: db.name
-                name: {{ .Release.Name }}-server-config
-          - name: DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                key: db.password
-                name: {{ .Release.Name }}-secrets
-          - name: ADMIN_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                key: admin.password
-                name: {{ .Release.Name }}-secrets
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-          stdin: true
-          tty: true
-          volumeMounts:
-            # Mount volume for sharing logs with fluentd - for publishing to central ELK
-            - mountPath: /home/frappe/docker-bench/logs
-              name: er-frappe-logs-dir
-            - mountPath: /home/frappe/docker-bench/sites/site1.docker
-              name: er-frappe-sites-vol
-              subPath: site1.docker
-            - mountPath: /home/frappe/docker-bench/sites/currentsite.txt
-              name: er-frappe-sites-vol
-              subPath: currentsite.txt
-            - mountPath: /home/frappe/docker-bench/sites/apps.txt
-              name: er-frappe-sites-vol
-              subPath: apps.txt
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-    {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
-    {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
+          env:
+            - name: KAFKA_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  key: kafka.config
+                  name: {{ .Release.Name }}-server-config
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: db.host
+                  name: {{ .Release.Name }}-server-config
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: db.name
+                  name: {{ .Release.Name }}-server-config
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: db.password
+                  name: {{ .Release.Name }}-secrets
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: admin.password
+                  name: {{ .Release.Name }}-secrets
+            resources:
+              {{- toYaml .Values.resources | nindent 12 }}
+            stdin: true
+            tty: true
+            volumeMounts:
+              # Mount volume for sharing logs with fluentd - for publishing to central ELK
+              - mountPath: /home/frappe/docker-bench/logs
+                name: er-frappe-logs-dir
+              - mountPath: /home/frappe/docker-bench/sites/site1.docker
+                name: er-frappe-sites-vol
+                subPath: site1.docker
+              - mountPath: /home/frappe/docker-bench/sites/currentsite.txt
+                name: er-frappe-sites-vol
+                subPath: currentsite.txt
+              - mountPath: /home/frappe/docker-bench/sites/apps.txt
+                name: er-frappe-sites-vol
+                subPath: apps.txt
         {{- if .Values.image.monitoring.enabled }}
         - name: {{ .Chart.Name }}-monitor
           image: "{{ .Values.image.monitoring.repository }}:{{ .Values.image.monitoring.tag }}"
@@ -111,7 +100,7 @@ spec:
         {{- end }}
         {{- if .Values.image.fluentd.enabled }}
         - name: {{ .Chart.Name }}-log-collector
-          image: "{{ .Values.image.fluentd.repository }}:{{ .Values.image.fluentd.tag }}"
+          image: "{{ .Values.image.fluentd.repository }}:{{ .Values.branch }}"
           imagePullPolicy: {{ .Values.image.fluentd.pullPolicy }}
           ports:
             - name: log-collector
@@ -137,6 +126,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+      restartPolicy: Always
       volumes:
         - name: er-frappe-sites-vol
           persistentVolumeClaim:

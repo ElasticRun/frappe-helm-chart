@@ -5,15 +5,32 @@
 # Number of PODs to be started
 replicaCount: 1
 targetNamespace: default
+# Target Environment
+env: develop
+
+persistence:
+  storageClass: er-frappe-sites-sc
+  capacityInGi: 5
+
+redis:
+  cache:
+    targetHost: cas-redis-cache
+    targetPort: 13000
+  socketio:
+    targetHost: cas-redis-socketio
+    targetPort: 12000
+  queue:
+    targetHost: cas-redis-queue
+    targetPort: 11000
+
+branch: develop
 
 # Image details
 image:
   #Image to be used for frappe/erpnext based application
-  frappe:
+  frappe-app:
     # Image name (including the registry, if using private registry)
     repository: dock.elasticrun.in/er-frappe11-base
-    # Image tag for the above image
-    tag: dev
     # Pull policy for the image above.
     pullPolicy: Always
   # Image to be used for monitoring sidecar for frappe container.
@@ -27,13 +44,11 @@ image:
     protocol:
   fluentd:
     enabled: true
-    repository: dock.elasticrun.in/er-fluentd
-    tag: dev
+    repository: dock.elasticrun.in/er-fluentd-base
     pullPolicy: Always
     externalPort: 24224
     elasticHost: elasticsearch-host
     elasticPort: 9200
-    configMap: er-elk-beta-config
 
 imagePullSecrets: []
 nameOverride: ""
@@ -44,29 +59,30 @@ service:
   port: 80
 
 db:
-  host: 192.168.1.13
   port: 3306
-  rootPassword: password
+  # Should be base64 encoded value of the actual password
+  rootPassword: cGFzc3dvcmQ= # encoded Value for 'password'
 
-redis:
-  cache:
-    host:
-    port:
-  queue:
-    host:
-    port:
-  socketio:
-    host:
-    port:
-
+## Optional /etc/hosts contents
 etchosts:
-  - ip: 10.61.0.4
+  - ip: 10.60.0.4
     hostnames:
-      - frappe.db.ntex.com
+      - beta-release-spine.ntex.com
+  - ip: 10.210.2.21
+    hostnames:
+      - release-spine.ntex.com
+  - ip: 10.75.0.97
+    hostnames:
+      - beta-release-db.ntex.com
+  # - ip: 1
+  #   hostnames:
+  #     - release-db.ntex.com
 
 site:
-  adminPassword: password
-  dbname: casdb
+  # Must be base64 encoded value for administrator password for the newly created site.
+  # encoded value for Nt3x!@#
+  adminPassword: TnQzeCFAIw==
+  dbname: testdb
 
 ingress:
   enabled: false
