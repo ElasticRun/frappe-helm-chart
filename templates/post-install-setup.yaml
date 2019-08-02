@@ -1,0 +1,126 @@
+{{ if .Values.redisserver.cache.clusterEnabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{.Release.Name}}-cache-post-install-job"
+  labels:
+    app.kubernetes.io/managed-by: {{.Release.Service | quote }}
+    app.kubernetes.io/instance: {{.Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    component: "cache"
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed,before-hook-creation
+spec:
+  template:
+    metadata:
+      name: "{{.Release.Name}}-cache"
+      labels:
+        app.kubernetes.io/managed-by: {{.Release.Service | quote }}
+        app.kubernetes.io/instance: {{.Release.Name | quote }}
+        helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: post-install-job-cache
+        image: dock.elasticrun.in/kubectl-client:release
+        imagePullPolicy: Always
+        env:
+        - name: REDIS_PORT
+          value: {{ .Values.redisserver.cache.listenport | quote }}
+        - name: REDIS_APP_NAME
+          value: {{ .Release.Name | replace " " "-" }}-redis-cache
+        - name: REDIS_STS_NAME
+          value: {{ .Release.Name | replace " " "-" }}-cache
+        - name: REDIS_POD_COUNT
+          value: {{ add .Values.redisserver.cache.replicaCount 1 | default 7 }}
+{{ end }}
+{{ if .Values.redisserver.queue.clusterEnabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{.Release.Name}}-queue-post-install-job"
+  labels:
+    app.kubernetes.io/managed-by: {{.Release.Service | quote }}
+    app.kubernetes.io/instance: {{.Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    component: "queue"
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed,before-hook-creation
+spec:
+  template:
+    metadata:
+      name: "{{.Release.Name}}-queue"
+      labels:
+        app.kubernetes.io/managed-by: {{.Release.Service | quote }}
+        app.kubernetes.io/instance: {{.Release.Name | quote }}
+        helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: post-install-job-queue
+        image: dock.elasticrun.in/kubectl-client:release
+        imagePullPolicy: Always
+        env:
+        - name: REDIS_PORT
+          value: {{ .Values.redisserver.queue.listenport | quote }}
+        - name: REDIS_APP_NAME
+          value: {{ .Release.Name | replace " " "-" }}-redis-queue
+        - name: REDIS_STS_NAME
+          value: {{ .Release.Name | replace " " "-" }}-queue
+        - name: REDIS_POD_COUNT
+          value: {{ add .Values.redisserver.queue.replicaCount 1 | default 7 }}
+{{ end }}
+{{ if .Values.redisserver.socketio.clusterEnabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{.Release.Name}}-socketio-post-install-job"
+  labels:
+    app.kubernetes.io/managed-by: {{.Release.Service | quote }}
+    app.kubernetes.io/instance: {{.Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    component: "queue"
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed,before-hook-creation
+spec:
+  template:
+    metadata:
+      name: "{{.Release.Name}}-socketio"
+      labels:
+        app.kubernetes.io/managed-by: {{.Release.Service | quote }}
+        app.kubernetes.io/instance: {{.Release.Name | quote }}
+        helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: post-install-job-socketio
+        image: dock.elasticrun.in/kubectl-client:release
+        imagePullPolicy: Always
+        env:
+        - name: REDIS_PORT
+          value: {{ .Values.redisserver.socketio.listenport | quote }}
+        - name: REDIS_APP_NAME
+          value: {{ .Release.Name | replace " " "-" }}-redis-socketio
+        - name: REDIS_STS_NAME
+          value: {{ .Release.Name | replace " " "-" }}-socketio
+        - name: REDIS_POD_COUNT
+          value: {{ add .Values.redisserver.socketio.replicaCount 1 | default 7 }}
+{{ end }}

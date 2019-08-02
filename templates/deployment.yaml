@@ -1,12 +1,16 @@
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ include "er-frappe.fullname" . }}
-  namespace: {{ .Values.targetNamespace }}
   labels:
 {{ include "er-frappe.labels" . | indent 4 }}
-spec:
-  replicas: {{ .Values.replicaCount }}
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: {{ .Values.replicaCount | default 1 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}
@@ -23,28 +27,33 @@ spec:
     {{- end }}
     {{- with .Values.etchosts }}
       hostAliases:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
-      containers:
+        {{- toYaml . | nindent 8 -}}
+    {{- end -}}
+      {{ "containers:" | nindent 6 }}
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.frappe-app.repository }}:{{ .Values.branch }}"
-          imagePullPolicy: {{ .Values.image.frappe-app.pullPolicy }}
+          image: "{{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}"
+          imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           ports:
             - name: nginx
               containerPort: 8000
               protocol: TCP
-            - name: filewatcher
-              containerPort: 6787
-              protocol: TCP
           livenessProbe:
             httpGet:
-              path: /api/resource/User
-              port: http
+              path: /app-health
+              port: nginx
           readinessProbe:
             httpGet:
-              path: /api/resource/User
-              port: http
+              path: /app-health
+              port: nginx
           env:
+            - name: GUNI_WORKER_CONNECTIONS
+              configMapKeyRef:
+                  key: gunicorn.connections.per.worker
+                  name: {{ .Release.Name }}-server-config
+            - name: GUNI_WORKERS
+              configMapKeyRef:
+                  key: gunicorn.workers
+                  name: {{ .Release.Name }}-server-config
             - name: KAFKA_CONFIG
               valueFrom:
                 configMapKeyRef:
@@ -70,23 +79,21 @@ spec:
                 secretKeyRef:
                   key: admin.password
                   name: {{ .Release.Name }}-secrets
-            resources:
-              {{- toYaml .Values.resources | nindent 12 }}
-            stdin: true
-            tty: true
-            volumeMounts:
-              # Mount volume for sharing logs with fluentd - for publishing to central ELK
-              - mountPath: /home/frappe/docker-bench/logs
-                name: er-frappe-logs-dir
-              - mountPath: /home/frappe/docker-bench/sites/site1.docker
-                name: er-frappe-sites-vol
-                subPath: site1.docker
-              - mountPath: /home/frappe/docker-bench/sites/currentsite.txt
-                name: er-frappe-sites-vol
-                subPath: currentsite.txt
-              - mountPath: /home/frappe/docker-bench/sites/apps.txt
-                name: er-frappe-sites-vol
-                subPath: apps.txt
+          resources: {{ toYaml .Values.resources }}
+          {{ "stdin: true" | nindent 10 }}
+          tty: true
+          volumeMounts:
+            - mountPath: /home/frappe/docker-bench/logs
+              name: er-frappe-logs-dir
+            - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
+              name: er-frappe-sites-vol
+              subPath: "site1.docker"
+            - mountPath: "/home/frappe/docker-bench/sites/currentsite.txt"
+              name: er-frappe-sites-vol
+              subPath: "currentsite.txt"
+            - mountPath: "/home/frappe/docker-bench/sites/apps.txt"
+              name: er-frappe-sites-vol
+              subPath: "apps.txt"
         {{- if .Values.image.monitoring.enabled }}
         - name: {{ .Chart.Name }}-monitor
           image: "{{ .Values.image.monitoring.repository }}:{{ .Values.image.monitoring.tag }}"
@@ -94,13 +101,12 @@ spec:
           ports:
             - name: monitor
               containerPort: {{ .Values.image.monitoring.port }}
-              protocol: {{ .Values.image.monitoring.protocol | default TCP }}
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+              protocol: {{ .Values.image.monitoring.protocol | default "TCP" }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
         {{- end }}
         {{- if .Values.image.fluentd.enabled }}
         - name: {{ .Chart.Name }}-log-collector
-          image: "{{ .Values.image.fluentd.repository }}:{{ .Values.branch }}"
+          image: "{{ .Values.image.fluentd.repository }}:release"
           imagePullPolicy: {{ .Values.image.fluentd.pullPolicy }}
           ports:
             - name: log-collector
@@ -111,8 +117,7 @@ spec:
               name: er-frappe-fluentd-config-vol
             - mountPath: /fluentd/log
               name: er-frappe-logs-dir
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+          resources: {{ toYaml .Values.resources | nindent 12 -}}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -141,3 +146,203 @@ spec:
         # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
         - name : er-frappe-logs-dir
           emptyDir: {}
+{{ if .Values.redisserver.enabled }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-cache
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: {{ if .Values.redisserver.cache.clusterEnabled }} {{ .Values.redisserver.cache.replicaCount | default 6 -}}{{ else }} 1{{ end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name | replace " " "-" }}-redis-cache
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | replace " " "-" }}-redis-cache
+    spec:
+      containers:
+      - name: redis-cache
+        image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+        command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_cache.conf"]
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        stdin: true
+        tty: true
+        resources: {}
+          # limits:
+          #   memory: "256Mi"
+          #   cpu: "100m"
+        ports:
+          - containerPort: {{ .Values.redisserver.cache.listenport  | default 6379}}
+            name: client
+          - containerPort: {{ add .Values.redisserver.cache.listenport 10000 }}
+            name: gossip
+        volumeMounts:
+        - mountPath: /etc/conf.d
+          name: er-redis-config
+          readOnly: true
+        - mountPath: /data
+          name: data
+          readOnly: false
+      restartPolicy: Always
+      volumes:
+      - name : er-redis-config
+        configMap:
+          name: {{ .Release.Name | replace " " "-" }}-redis-config
+          defaultMode: 0755
+      {{- if .Values.redisserver.cache.persistence.enabled | default false -}}
+  {{- "volumeClaimTemplates:" | nindent 2 }}
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.redisserver.cache.persistence.storageCapacityinGi  | default 1 -}}Gi
+      {{ else }}
+      - name: data
+        emptyDir: {}
+      {{ end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-queue
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: {{ if .Values.redisserver.queue.clusterEnabled }} {{ .Values.redisserver.queue.replicaCount | default 6 -}}{{ else }} 1{{ end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name | replace " " "-" }}-redis-queue
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | replace " " "-" }}-redis-queue
+    spec:
+      containers:
+      - name: redis-cache
+        image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+        command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_queue.conf"]
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        stdin: true
+        tty: true
+        resources: {}
+          # limits:
+          #   memory: "256Mi"
+          #   cpu: "100m"
+        ports:
+          - containerPort: {{ .Values.redisserver.queue.listenport  | default 6379}}
+            name: client
+          - containerPort: {{ add .Values.redisserver.queue.listenport 10000 }}
+            name: gossip
+        volumeMounts:
+        - mountPath: /etc/conf.d
+          name: er-redis-config
+          readOnly: true
+        - mountPath: /data
+          name: data
+          readOnly: false
+      restartPolicy: Always
+      volumes:
+      - name : er-redis-config
+        configMap:
+          name: {{ .Release.Name | replace " " "-" }}-redis-config
+          defaultMode: 0755
+      {{- if .Values.redisserver.queue.persistence.enabled | default false -}}
+  {{- "volumeClaimTemplates:" | nindent 2 }}
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.redisserver.queue.persistence.storageCapacityinGi  | default 1 -}}Gi
+      {{ else }}
+      - name: data
+        emptyDir: {}
+      {{ end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-socketio
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: {{ if .Values.redisserver.socketio.clusterEnabled }} {{ .Values.redisserver.socketio.replicaCount | default 6 -}}{{ else }} 1{{ end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name | replace " " "-" }}-redis-socketio
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | replace " " "-" }}-redis-socketio
+    spec:
+      containers:
+      - name: redis-cache
+        image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+        command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_socketio.conf"]
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        stdin: true
+        tty: true
+        resources: {}
+          # limits:
+          #   memory: "256Mi"
+          #   cpu: "100m"
+        ports:
+          - containerPort: {{ .Values.redisserver.socketio.listenport  | default 6379}}
+            name: client
+          - containerPort: {{ add .Values.redisserver.socketio.listenport 10000 }}
+            name: gossip
+        volumeMounts:
+        - mountPath: /etc/conf.d
+          name: er-redis-config
+          readOnly: true
+        - mountPath: /data
+          name: data
+          readOnly: false
+      restartPolicy: Always
+      volumes:
+      - name : er-redis-config
+        configMap:
+          name: {{ .Release.Name | replace " " "-" }}-redis-config
+          defaultMode: 0755
+      {{- if .Values.redisserver.socketio.persistence.enabled | default false -}}
+  {{- "volumeClaimTemplates:" | nindent 2 }}
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.redisserver.socketio.persistence.storageCapacityinGi  | default 1 -}}Gi
+      {{ else }}
+      - name: data
+        emptyDir: {}
+      {{ end }}
+{{ end }}

@@ -4,36 +4,41 @@
 
 # Number of PODs to be started
 replicaCount: 1
-targetNamespace: default
-# Target Environment
-env: develop
+targetNamespace: frappe-base
 
 persistence:
   storageClass: er-frappe-sites-sc
   capacityInGi: 5
 
+# This configuration will not be used if redisserver.enabled is true.
 redis:
   cache:
-    targetHost: cas-redis-cache
+    targetHost: {{ .Release.Name | default "frappe-base" }}-cache-ntex-com
     targetPort: 13000
   socketio:
-    targetHost: cas-redis-socketio
+    targetHost: {{ .Release.Name | default "frappe-base" }}-socketio-ntex-com
     targetPort: 12000
   queue:
-    targetHost: cas-redis-queue
+    targetHost: {{ .Release.Name | default "frappe-base" }}-queue-ntex-com
     targetPort: 11000
 
-branch: develop
+# Target Environment - can be only beta-release or release
+branch: release
 
 # Image details
 image:
   #Image to be used for frappe/erpnext based application
-  frappe-app:
+  frappeapp:
     # Image name (including the registry, if using private registry)
     repository: dock.elasticrun.in/er-frappe11-base
     # Pull policy for the image above.
     pullPolicy: Always
   # Image to be used for monitoring sidecar for frappe container.
+  redis:
+    repository: redis
+    tag: alpine
+    pullPolicy: IfNotPresent
+
   monitoring:
     #
     enabled: false
@@ -47,8 +52,45 @@ image:
     repository: dock.elasticrun.in/er-fluentd-base
     pullPolicy: Always
     externalPort: 24224
-    elasticHost: elasticsearch-host
+    elasticHost: elasticsearch.ntex.com
     elasticPort: 9200
+
+redisserver:
+  enabled: true
+  cache:
+    clusterEnabled: false
+    #Will be used only if cluster is enabled.
+    replicaCount: 6
+    service:
+      type: ClusterIP
+      port: 13000
+    listenport: 6379
+    maxmemory: 292mb
+    persistence:
+      enabled: false
+      storageCapacityinGi: 1
+  queue:
+    clusterEnabled: false
+    #Will be used only if cluster is enabled.
+    replicaCount: 6
+    service:
+      type: ClusterIP
+      port: 11000
+    listenport: 6381
+    persistence:
+      enabled: false
+      storageCapacityinGi: 1
+  socketio:
+    clusterEnabled: false
+    #Will be used only if cluster is enabled.
+    replicaCount: 6
+    service:
+      type: ClusterIP
+      port: 12000
+    listenport: 6380
+    persistence:
+      enabled: false
+      storageCapacityinGi: 1
 
 imagePullSecrets: []
 nameOverride: ""
@@ -61,7 +103,13 @@ service:
 db:
   port: 3306
   # Should be base64 encoded value of the actual password
-  rootPassword: cGFzc3dvcmQ= # encoded Value for 'password'
+  # encoded Value for 'Ntex@123'
+  rootPassword: TnRleEAxMjM=
+
+web:
+  gunicorn:
+    connections_per_worker: 200
+    workers: 4
 
 ## Optional /etc/hosts contents
 etchosts:
@@ -74,6 +122,16 @@ etchosts:
   - ip: 10.75.0.97
     hostnames:
       - beta-release-db.ntex.com
+  - ip: 10.75.0.97
+    hostnames:
+      - release-db.ntex.com
+  - ip: 10.210.3.4
+    hostnames:
+      - beta-release-elasticsearch.ntex.com
+  - ip: 10.210.3.4
+    hostnames:
+      - release-elasticsearch.ntex.com
+
   # - ip: 1
   #   hostnames:
   #     - release-db.ntex.com

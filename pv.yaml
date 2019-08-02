@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: er-frappe-sites-pv
+  namespace: frappe-base
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: er-frappe-sites-sc
+  azureFile:
+    secretName: er-frappe-aks-share-secret
+    shareName: er-frappe-base-sites-share
+    secretNamespace: frappe-base
+    readOnly: false
+  mountOptions:
+    - dir_mode=0777
+    - file_mode=0777
+    - mfsymlinks
