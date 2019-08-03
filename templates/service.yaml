@@ -39,7 +39,7 @@ metadata:
 {{ include "er-frappe.labels" . | indent 4 }}
 spec:
   type: ExternalName
-  externalName: {{ if .Values.redisserver.enabled }}{{ .Release.Name | replace " " "-" }}-cache-ntex-com{{ else }}{{ .Values.redis.cache.targetHost }}{{ end }}
+  externalName: {{ if .Values.redisserver.enabled }}{{ .Release.Name | replace " " "-" }}-cache-ntex-com{{ else }}{{ tpl .Values.redis.cache.targetHost . }}{{ end }}
   ports:
     - port: 13000
       targetPort: {{ if .Values.redisserver.enabled }}{{ .Values.redisserver.cache.service.port | default 13000 }}{{ else }}{{ .Values.redis.cache.targetPort }}{{ end }}
@@ -55,7 +55,7 @@ metadata:
 {{ include "er-frappe.labels" . | indent 4 }}
 spec:
   type: ExternalName
-  externalName: {{ if .Values.redisserver.enabled }}{{ .Release.Name | replace " " "-" }}-socketio-ntex-com{{ else }}{{ .Values.redis.socketio.targetHost }}{{ end }}
+  externalName: {{ if .Values.redisserver.enabled }}{{ .Release.Name | replace " " "-" }}-socketio-ntex-com{{ else }}{{ tpl .Values.redis.socketio.targetHost . }}{{ end }}
   ports:
     - port: 12000
       targetPort: {{ if .Values.redisserver.enabled }}{{ .Values.redisserver.socketio.service.port | default 12000 }}{{ else }}{{ .Values.redis.socketio.targetPort }}{{ end }}
@@ -71,7 +71,7 @@ metadata:
 {{ include "er-frappe.labels" . | indent 4 }}
 spec:
   type: ExternalName
-  externalName: {{ if .Values.redisserver.enabled }}{{ .Release.Name | replace " " "-" }}-queue-ntex-com{{ else }}{{ .Values.redis.queue.targetHost }}{{ end }}
+  externalName: {{ if .Values.redisserver.enabled }}{{ .Release.Name | replace " " "-" }}-queue-ntex-com{{ else }}{{ tpl .Values.redis.queue.targetHost . }}{{ end }}
   ports:
     - port: 11000
       targetPort: {{ if .Values.redisserver.enabled }}{{ .Values.redisserver.queue.service.port | default 11000 }}{{ else }}{{ .Values.redis.queue.targetPort }}{{ end }}

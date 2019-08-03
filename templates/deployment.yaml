@@ -30,8 +30,8 @@ metadata:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
       {{ "containers:" | nindent 6 }}
-        - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}"
+        - name: frappe
+          image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           ports:
             - name: nginx
@@ -135,7 +135,7 @@ metadata:
       volumes:
         - name: er-frappe-sites-vol
           persistentVolumeClaim:
-            claimName: er-frappe-sites-pvc
+            claimName: {{ .Release.Name }}-sites-pvc
         - name: er-frappe-fluentd-config-vol
           configMap:
             name : {{ .Release.Name }}-fluentd-config
@@ -168,8 +168,8 @@ metadata:
     spec:
       containers:
       - name: redis-cache
-        image: {{ .Values.image.name }}:{{ .Values.image.tag }}
-        imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+        image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
+        imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
         command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_cache.conf"]
         env:
         - name: POD_IP
@@ -234,8 +234,8 @@ metadata:
     spec:
       containers:
       - name: redis-cache
-        image: {{ .Values.image.name }}:{{ .Values.image.tag }}
-        imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+        image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
+        imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
         command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_queue.conf"]
         env:
         - name: POD_IP
@@ -300,8 +300,8 @@ metadata:
     spec:
       containers:
       - name: redis-cache
-        image: {{ .Values.image.name }}:{{ .Values.image.tag }}
-        imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+        image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
+        imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
         command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_socketio.conf"]
         env:
         - name: POD_IP

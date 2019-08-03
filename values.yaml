@@ -7,56 +7,25 @@ replicaCount: 1
 targetNamespace: frappe-base
 
 persistence:
-  storageClass: er-frappe-sites-sc
+  # only azure supported
+  type: azure
+  # only 'file' or 'disk' supported
+  subtype: file
   capacityInGi: 5
-
-# This configuration will not be used if redisserver.enabled is true.
-redis:
-  cache:
-    targetHost: {{ .Release.Name | default "frappe-base" }}-cache-ntex-com
-    targetPort: 13000
-  socketio:
-    targetHost: {{ .Release.Name | default "frappe-base" }}-socketio-ntex-com
-    targetPort: 12000
-  queue:
-    targetHost: {{ .Release.Name | default "frappe-base" }}-queue-ntex-com
-    targetPort: 11000
-
-# Target Environment - can be only beta-release or release
-branch: release
-
-# Image details
-image:
-  #Image to be used for frappe/erpnext based application
-  frappeapp:
-    # Image name (including the registry, if using private registry)
-    repository: dock.elasticrun.in/er-frappe11-base
-    # Pull policy for the image above.
-    pullPolicy: Always
-  # Image to be used for monitoring sidecar for frappe container.
-  redis:
-    repository: redis
-    tag: alpine
-    pullPolicy: IfNotPresent
-
-  monitoring:
-    #
-    enabled: false
-    repository:
-    tag:
-    pullPolicy:
-    port:
-    protocol:
-  fluentd:
-    enabled: true
-    repository: dock.elasticrun.in/er-fluentd-base
-    pullPolicy: Always
-    externalPort: 24224
-    elasticHost: elasticsearch.ntex.com
-    elasticPort: 9200
+  # Storage account should already exist.
+  storageaccount: erbk8sappall
+  # File share by this name must already exist in the storage account mentioned above.
+  sharename: er-frappe-base-sites-share
+  # base64 encoded storage account access key
+  storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
+  location: sea
 
 redisserver:
   enabled: true
+  image:
+    repository: redis
+    tag: alpine
+    pullPolicy: IfNotPresent
   cache:
     clusterEnabled: false
     #Will be used only if cluster is enabled.
@@ -91,6 +60,51 @@ redisserver:
     persistence:
       enabled: false
       storageCapacityinGi: 1
+
+# This configuration will not be used if redisserver.enabled is true.
+redis:
+  cache:
+    targetHost: frappe11-cache-ntex-com
+    targetPort: 13000
+  socketio:
+    targetHost: frappe11-socketio-ntex-com
+    targetPort: 12000
+  queue:
+    targetHost: frappe11-queue-ntex-com
+    targetPort: 11000
+
+# Target Environment - can be only beta-release or release
+branch: release
+
+# Image details
+image:
+  #Image to be used for frappe/erpnext based application
+  frappeapp:
+    # Image name (including the registry, if using private registry)
+    repository: dock.elasticrun.in/er-frappe11-base
+    # Pull policy for the image above.
+    pullPolicy: Always
+  # Image to be used for monitoring sidecar for frappe container.
+  redis:
+    repository: redis
+    tag: alpine
+    pullPolicy: IfNotPresent
+
+  monitoring:
+    #
+    enabled: false
+    repository:
+    tag:
+    pullPolicy:
+    port:
+    protocol:
+  fluentd:
+    enabled: true
+    repository: dock.elasticrun.in/er-fluentd-base
+    pullPolicy: Always
+    externalPort: 24224
+    elasticHost: elasticsearch.ntex.com
+    elasticPort: 9200
 
 imagePullSecrets: []
 nameOverride: ""
@@ -140,7 +154,7 @@ site:
   # Must be base64 encoded value for administrator password for the newly created site.
   # encoded value for Nt3x!@#
   adminPassword: TnQzeCFAIw==
-  dbname: testdb
+  dbname: frappe11db
 
 ingress:
   enabled: false
