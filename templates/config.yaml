@@ -10,9 +10,9 @@ data:
   db.host: {{ .Release.Name }}-db-ntex-com
   db.name: {{ .Values.site.dbname }}
   kafka.config: |
-    '{
+    {
       "auto.offset.reset": "smallest",
-      "bootstrap.servers": "{ .Values.branch }}-spine.ntex.com\:10180"
+      "bootstrap.servers": "{{ .Values.branch }}-spine.ntex.com:10180",
       "client.id": {{ printf "%s-%s" .Release.Name "-spine-client" | quote }},
       "default.topic.config": {
         "acks": "all"
@@ -20,7 +20,7 @@ data:
       "fetch.message.max.bytes": "81920",
       "group.id": {{ printf "%s-%s" .Release.Name "-spine-client-grp" | quote }},
       "request.required.acks": "1"
-    }'
+    }
 
 ---
 apiVersion: v1

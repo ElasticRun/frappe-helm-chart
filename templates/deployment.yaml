@@ -38,10 +38,16 @@ metadata:
               containerPort: 8000
               protocol: TCP
           livenessProbe:
+            initialDelaySeconds: 600
+            failureThreshold: 5
+            timeoutSeconds: 5
             httpGet:
               path: /app-health
               port: nginx
           readinessProbe:
+            initialDelaySeconds: 600
+            failureThreshold: 10
+            timeoutSeconds: 5
             httpGet:
               path: /app-health
               port: nginx
