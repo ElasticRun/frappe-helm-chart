@@ -8,7 +8,7 @@ targetNamespace: frappe-base
 
 persistence:
   # only azure and local supported
-  type: azure
+  type: local
   # only 'file' or 'disk' supported for azure. Ignored for local
   subtype: file
   capacityInGi: 5
@@ -101,7 +101,7 @@ image:
   fluentd:
     enabled: true
     repository: dock.elasticrun.in/er-fluentd-base
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     externalPort: 24224
     elasticHost: elasticsearch.ntex.com
     elasticPort: 9200
@@ -118,7 +118,7 @@ db:
   port: 3306
   # Should be base64 encoded value of the actual password
   # encoded Value for 'Ntex@123'
-  rootPassword: TnRleEAxMjM=
+  rootPassword: cGFzc3dvcmQ=
 
 web:
   gunicorn:
@@ -127,22 +127,22 @@ web:
 
 ## Optional /etc/hosts contents
 etchosts:
-  - ip: 10.60.0.4
+  - ip: 192.168.122.1
     hostnames:
       - beta-release-spine.ntex.com
-  - ip: 10.210.2.21
+  - ip: 192.168.122.1
     hostnames:
       - release-spine.ntex.com
-  - ip: 10.75.0.97
+  - ip: 192.168.122.1
     hostnames:
       - beta-release-db.ntex.com
-  - ip: 10.75.0.97
+  - ip: 192.168.122.1
     hostnames:
       - release-db.ntex.com
-  - ip: 10.210.3.4
+  - ip: 192.168.122.1
     hostnames:
       - beta-release-elasticsearch.ntex.com
-  - ip: 10.210.3.4
+  - ip: 192.168.122.1
     hostnames:
       - release-elasticsearch.ntex.com
 

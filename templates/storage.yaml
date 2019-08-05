@@ -7,7 +7,7 @@ metadata:
 spec:
   accessModes:
   - ReadWriteMany
-  storageClassName: {{ if eq .Values.persistence.type "azure" }}{{ .Release.Name }}-sites-sc{{ else }}default{{ end }}
+  storageClassName: {{ if eq .Values.persistence.type "azure" }}{{ .Release.Name }}-sites-sc{{ else if eq .Values.persistence.type "local" }}{{ .Release.Name }}-sites-sc{{ else }}default{{ end }}
   resources:
     requests:
       storage: {{ .Values.persistence.capacityInGi }}Gi
@@ -61,4 +61,39 @@ spec:
     - dir_mode=0777
     - file_mode=0777
     - mfsymlinks
+{{ else if eq .Values.persistence.type "local" }}
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .Release.Name }}-sites-sc
+# labels:
+#     addonmanager.kubernetes.io/mode: EnsureExists
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+# mountOptions:
+#   - dir_mode=0777
+#   - file_mode=0777
+#   - uid=frappe
+#   - gid=frappe
+# Values below are specific to provider
+provisioner: microk8s.io/hostpath
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-sites-pv
+spec:
+  capacity:
+    storage: {{ .Values.persistence.capacityInGi }}Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Release.Name }}-sites-sc
+  hostPath:
+    path: /data/frappe/Software/k8s-volumes/frappe-vol/
+  # mountOptions:
+  #   - dir_mode=0777
+  #   - file_mode=0777
+  #   - uid=frappe
+  #   - gid=frappe
 {{ end }}

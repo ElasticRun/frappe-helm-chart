@@ -4,4 +4,4 @@ description: A Helm chart for deploying Frappe/ERPNext based applications on a K
 name: er-frappe
 version: 0.1.0
 kubeVersion: ">=1.13.5"
-tillerVersion: ">=2.14.2"
+tillerVersion: ">=2.14.1"
