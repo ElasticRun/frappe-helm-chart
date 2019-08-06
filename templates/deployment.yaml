@@ -100,9 +100,9 @@ metadata:
             - mountPath: "/home/frappe/docker-bench/sites/apps.txt"
               name: er-frappe-sites-vol
               subPath: "apps.txt"
-            - mountPath: "/home/frappe/docker-bench/sites/common_site_config_docker.json"
+            - mountPath: "/home/frappe/docker-bench/sites/common_site_config.json"
               name: er-frappe-sites-vol
-              subPath: "common_site_config_docker.json"
+              subPath: "common_site_config.json"
         {{- if .Values.image.monitoring.enabled }}
         - name: {{ .Chart.Name }}-monitor
           image: "{{ .Values.image.monitoring.repository }}:{{ .Values.image.monitoring.tag }}"
