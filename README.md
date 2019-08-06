@@ -14,6 +14,7 @@ This project provides a helm chart for deploying a Frappe/ERPnext based applicat
 <pre>helm install --name <release name> -f <path to values.yaml> .</pre>
 For example -
 <pre>helm install --name cas -f /workspace/matrix/values-matrix.yaml .</pre>
+4. Chart can also be installed from any location, by providing path to the local chart directory instead of '.' (current directory) in the command above.
 
 ## Key Terms
 * Release Name - Name provided in above command after `--name` parameter.
