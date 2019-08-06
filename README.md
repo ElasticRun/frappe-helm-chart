@@ -5,6 +5,7 @@ This project provides a helm chart for deploying a Frappe/ERPnext based applicat
 1. Working installation of Helm components - `Tiller` installed and configured (for `RBAC`) on target Kubernetes cluster and 'helm' client machine. For more details please refer to [Helm documentation](https://helm.sh/docs/using_helm/#installing-helm).
 2. Storage provisioned using either `azure-file` or `azure-disk` (for AKS deployments). This involves creation of a storage account and a `file-share`, if using `azure-file` based persistent storage. For `azure-disk` based persistence, it setting up of [dynamic provisioning](https://docs.microsoft.com/en-us/azure/aks/azure-disks-dynamic-pv) is recommended. The disk can be provisioned using steps provided [Here](https://docs.docker.com/ee/ucp/kubernetes/storage/use-azure-disk/). Once provisioned, create a blank `apps.txt` and `currentsite.txt` in the shared drive created for the application. Note that, without this, the application __will fail to deploy__.
 3. Docker image created and available (i.e. `docker push`ed) in a shared repository.
+4. Namespace where the components are to be deployed. This should be provided as `targetNamespace` in `values.yaml`.
 
 ## Installation Steps
 1. `git clone` this chart (until a helm chart repository is setup) to any location locally.
