@@ -6,6 +6,9 @@
 replicaCount: 1
 targetNamespace: frappe-base
 
+# Target Environment - can be only beta-release or release
+branch: release
+
 persistence:
   # only azure and local supported
   type: azure
@@ -15,6 +18,8 @@ persistence:
   # Storage account should already exist.
   storageaccount: erbk8sappall
   # File share by this name must already exist in the storage account mentioned above.
+  # This file share should also already have blank files named apps.txt and currentsite.txt.
+  # Also copy common_site_config.json file with configuration details.
   sharename: er-frappe-base-sites-share
   # base64 encoded storage account access key
   storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
@@ -73,9 +78,6 @@ redis:
     targetHost: frappe11-queue-ntex-com
     targetPort: 11000
 
-# Target Environment - can be only beta-release or release
-branch: release
-
 # Image details
 image:
   #Image to be used for frappe/erpnext based application
@@ -84,12 +86,15 @@ image:
     repository: dock.elasticrun.in/er-frappe11-base
     # Pull policy for the image above.
     pullPolicy: Always
+  readinessProbe:
+    httpGetPath: /app-health
+  livenessProbe:
+    httpGetPath: /app-health
   # Image to be used for monitoring sidecar for frappe container.
   redis:
     repository: redis
     tag: alpine
     pullPolicy: IfNotPresent
-
   monitoring:
     #
     enabled: false

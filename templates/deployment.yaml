@@ -38,18 +38,18 @@ metadata:
               containerPort: 8000
               protocol: TCP
           livenessProbe:
-            initialDelaySeconds: 600
+            initialDelaySeconds: 10
             failureThreshold: 5
-            timeoutSeconds: 5
+            timeoutSeconds: 3
             httpGet:
-              path: /app-health
+              path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
               port: nginx
           readinessProbe:
-            initialDelaySeconds: 600
-            failureThreshold: 10
-            timeoutSeconds: 5
+            initialDelaySeconds: 10
+            failureThreshold: 5
+            timeoutSeconds: 3
             httpGet:
-              path: /app-health
+              path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
               port: nginx
           env:
             - name: GUNI_WORKER_CONNECTIONS
