@@ -20,7 +20,7 @@ persistence:
   # File share by this name must already exist in the storage account mentioned above.
   # This file share should also already have blank files named apps.txt and currentsite.txt.
   # Also copy common_site_config.json file with configuration details.
-  sharename: er-frappe-base-sites-share
+  sharename: frappe11-sites-share
   # base64 encoded storage account access key
   storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
   location: sea
