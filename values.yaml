@@ -86,10 +86,10 @@ image:
     repository: dock.elasticrun.in/er-frappe11-base
     # Pull policy for the image above.
     pullPolicy: Always
-  readinessProbe:
-    httpGetPath: /app-health
-  livenessProbe:
-    httpGetPath: /app-health
+    readinessProbe:
+      httpGetPath: /app-health
+    livenessProbe:
+      httpGetPath: /app-health
   # Image to be used for monitoring sidecar for frappe container.
   redis:
     repository: redis
