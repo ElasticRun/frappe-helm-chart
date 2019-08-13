@@ -33,12 +33,25 @@ data:
     <source>
       @type tail
       path /fluentd/log/*.log
+      path_key filename
       pos_file /home/frappe/td-agent/frappe-logs.pos
-      tag frappe.${file}
+      tag frappe.${filename}
       <parse>
         @type none
       </parse>
     </source>
+    <filter **>
+      type elasticsearch_timestamp_check
+      subsecond_precision 3
+    </filter>
+    <filter **>
+      @type record_transformer
+      <record>
+        branch {{ .Values.branch }}
+        namespace {{ .Values.targetNamespace }}
+        releasename  {{ .Release.Name }}
+      </record>
+    </filter>
     <match frappe.**>
       @type elasticsearch
       host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
