@@ -141,14 +141,10 @@ etchosts:
   - ip: 10.75.0.97
     hostnames:
       - beta-release-db.ntex.com
-  - ip: 10.75.0.97
-    hostnames:
       - release-db.ntex.com
-  - ip: 10.210.3.4
+  - ip: 10.76.0.66
     hostnames:
       - beta-release-elasticsearch.ntex.com
-  - ip: 10.210.3.4
-    hostnames:
       - release-elasticsearch.ntex.com
 
   # - ip: 1
