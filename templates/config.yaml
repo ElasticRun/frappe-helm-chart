@@ -56,6 +56,7 @@ data:
       @type elasticsearch
       host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
       port {{ .Values.image.fluentd.elasticPort }}
+      index_name fluentd
       logstash_format true
     </match>
 {{ if .Values.redisserver.enabled }}
