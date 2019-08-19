@@ -53,13 +53,15 @@ metadata:
               port: nginx
           env:
             - name: GUNI_WORKER_CONNECTIONS
-              configMapKeyRef:
-                  key: gunicorn.connections.per.worker
-                  name: {{ .Release.Name }}-server-config
+              valueFrom:
+                configMapKeyRef:
+                    key: gunicorn.connections.per.worker
+                    name: {{ .Release.Name }}-server-config
             - name: GUNI_WORKERS
-              configMapKeyRef:
-                  key: gunicorn.workers
-                  name: {{ .Release.Name }}-server-config
+              valueFrom:
+                configMapKeyRef:
+                    key: gunicorn.workers
+                    name: {{ .Release.Name }}-server-config
             - name: KAFKA_CONFIG
               valueFrom:
                 configMapKeyRef:
