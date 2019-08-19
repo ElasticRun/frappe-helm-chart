@@ -105,7 +105,7 @@ image:
   fluentd:
     enabled: true
     repository: dock.elasticrun.in/er-fluentd-base
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
     externalPort: 24224
     elasticHost: elasticsearch.ntex.com
     elasticPort: 9200
