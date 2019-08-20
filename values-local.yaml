@@ -6,21 +6,16 @@
 replicaCount: 1
 targetNamespace: frappe-base
 
-# Target Environment - can be only beta-release or release
-branch: release
-
 persistence:
   # only azure and local supported
-  type: azure
+  type: local
   # only 'file' or 'disk' supported for azure. Ignored for local
   subtype: file
   capacityInGi: 5
   # Storage account should already exist.
   storageaccount: erbk8sappall
   # File share by this name must already exist in the storage account mentioned above.
-  # This file share should also already have blank files named apps.txt and currentsite.txt.
-  # Also copy common_site_config.json file with configuration details.
-  sharename: frappe11-sites-share
+  sharename: er-frappe-base-sites-share
   # base64 encoded storage account access key
   storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
   location: sea
@@ -78,6 +73,9 @@ redis:
     targetHost: frappe11-queue-ntex-com
     targetPort: 11000
 
+# Target Environment - can be only beta-release or release
+branch: release
+
 # Image details
 image:
   #Image to be used for frappe/erpnext based application
@@ -95,6 +93,7 @@ image:
     repository: redis
     tag: alpine
     pullPolicy: IfNotPresent
+
   monitoring:
     #
     enabled: false
@@ -123,7 +122,7 @@ db:
   port: 3306
   # Should be base64 encoded value of the actual password
   # encoded Value for 'Ntex@123'
-  rootPassword: TnRleEAxMjM=
+  rootPassword: cGFzc3dvcmQ=
 
 web:
   gunicorn:
@@ -132,19 +131,23 @@ web:
 
 ## Optional /etc/hosts contents
 etchosts:
-  - ip: 10.60.0.4
+  - ip: 192.168.122.1
     hostnames:
       - beta-release-spine.ntex.com
-  - ip: 10.210.2.21
+  - ip: 192.168.122.1
     hostnames:
       - release-spine.ntex.com
-  - ip: 10.75.0.97
+  - ip: 192.168.122.1
     hostnames:
       - beta-release-db.ntex.com
+  - ip: 192.168.122.1
+    hostnames:
       - release-db.ntex.com
-  - ip: 10.76.0.66
+  - ip: 192.168.122.1
     hostnames:
       - beta-release-elasticsearch.ntex.com
+  - ip: 192.168.122.1
+    hostnames:
       - release-elasticsearch.ntex.com
 
   # - ip: 1

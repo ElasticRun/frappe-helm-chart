@@ -1,7 +1,128 @@
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-server-config
+  namespace: {{ .Values.targetNamespace }}
 data:
+  gunicorn.connections.per.worker: {{ .Values.web.gunicorn.connections_per_worker | default 200 | quote }}
+  gunicorn.workers: {{ .Values.web.gunicorn.workers | default 4 | quote }}
   db.host: {{ .Release.Name }}-db-ntex-com
   db.name: {{ .Values.site.dbname }}
+  kafka.config: |
+    {
+      "auto.offset.reset": "smallest",
+      "bootstrap.servers": "{{ .Values.branch }}-spine.ntex.com:10180",
+      "client.id": {{ printf "%s-%s" .Release.Name "-spine-client" | quote }},
+      "default.topic.config": {
+        "acks": "all"
+      },
+      "fetch.message.max.bytes": "81920",
+      "group.id": {{ printf "%s-%s" .Release.Name "-spine-client-grp" | quote }},
+      "request.required.acks": "1"
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-fluentd-config
+  namespace: {{ .Values.targetNamespace }}
+data:
+  fluent.conf: |
+    <source>
+      @type tail
+      path /fluentd/log/*.log
+      path_key filename
+      pos_file /home/frappe/td-agent/frappe-logs.pos
+      tag frappe.${filename}
+      <parse>
+        @type none
+      </parse>
+    </source>
+    <filter **>
+      type elasticsearch_timestamp_check
+      subsecond_precision 3
+    </filter>
+    <filter **>
+      @type record_transformer
+      <record>
+        branch {{ .Values.branch }}
+        namespace {{ .Values.targetNamespace }}
+        releasename  {{ .Release.Name }}
+      </record>
+    </filter>
+    <match frappe.**>
+      @type elasticsearch
+      host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
+      port {{ .Values.image.fluentd.elasticPort }}
+      index_name fluentd
+      logstash_format true
+    </match>
+{{ if .Values.redisserver.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-redis-config
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+data:
+  update-node.sh: |
+    #!/bin/sh
+    REDIS_NODES="/data/nodes.conf"
+    sed -i -e "/myself/ s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/${POD_IP}/" ${REDIS_NODES}
+    exec "$@"
+
+  redis_cache.conf: |
+    dbfilename redis_cache.rdb
+    bind 0.0.0.0
+    port {{ .Values.redisserver.cache.listenport }}
+
+    maxmemory {{ .Values.redisserver.cache.maxmemory | default "256mb" }}
+    maxmemory-policy allkeys-lru
+    save ""
+
+    {{- if .Values.redisserver.cache.clusterEnabled -}}
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-node-timeout 15000
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    appendonly yes
+    protected-mode no
+    {{ else }}
+    appendonly no
+    {{- end }}
+
+  redis_queue.conf: |
+    dbfilename redis_queue.rdb
+    bind 0.0.0.0
+    port {{ .Values.redisserver.queue.listenport }}
+
+    {{- if .Values.redisserver.queue.clusterEnabled -}}
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-node-timeout 15000
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    appendonly yes
+    protected-mode no
+    {{- end }}
+
+  redis_socketio.conf: |
+    dbfilename redis_socketio.rdb
+    bind 0.0.0.0
+    port {{ .Values.redisserver.socketio.listenport }}
+
+    {{- if .Values.redisserver.socketio.clusterEnabled -}}
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-node-timeout 15000
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    appendonly yes
+    protected-mode no
+    {{- end }}
+{{ end }}

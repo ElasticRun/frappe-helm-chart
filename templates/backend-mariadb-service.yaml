@@ -1,8 +1,0 @@
-kind: Service
-apiVersion: v1
-metadata:
- name: {{ .Release.Name }}-db-ntex-com
-spec:
- ports:
- - port: 3306
-   targetPort: {{ .Values.db.port | default 3306 }}

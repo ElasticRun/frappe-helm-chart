@@ -1,9 +1,0 @@
-kind: Endpoints
-apiVersion: v1
-metadata:
- name: {{ .Release.Name }}-db-ntex-com
-subsets:
- - addresses:
-     - ip: {{ .Values.db.host }}
-   ports:
-     - port: {{ .Values.db.port | default 3306 }}
