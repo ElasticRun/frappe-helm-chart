@@ -110,6 +110,7 @@ image:
     externalPort: 24224
     elasticHost: elasticsearch.ntex.com
     elasticPort: 9200
+    indexname: er-bk8s-app-all
 
 imagePullSecrets: []
 nameOverride: ""

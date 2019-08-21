@@ -119,6 +119,15 @@ metadata:
         - name: {{ .Chart.Name }}-log-collector
           image: "{{ .Values.image.fluentd.repository }}:release"
           imagePullPolicy: {{ .Values.image.fluentd.pullPolicy }}
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           ports:
             - name: log-collector
               containerPort: {{ .Values.image.fluentd.externalPort }}
