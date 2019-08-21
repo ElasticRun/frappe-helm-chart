@@ -40,6 +40,14 @@ data:
         @type none
       </parse>
     </source>
+    {{ if .Values.image.fluentd.gelfEnabled | default "true" }}
+    <source>
+      @type gelf
+      tag frappe.gelf
+      bind 127.0.0.1
+      port 12201
+    </source>
+    {{ end }}
     <filter **>
       type elasticsearch_timestamp_check
       subsecond_precision 3
