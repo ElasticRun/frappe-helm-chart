@@ -111,6 +111,7 @@ image:
     elasticHost: elasticsearch.ntex.com
     elasticPort: 9200
     indexname: er-bk8s-app-all
+    gelfEnabled: true
 
 imagePullSecrets: []
 nameOverride: ""
