@@ -59,7 +59,9 @@ data:
       host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
       port {{ .Values.image.fluentd.elasticPort }}
       index_name fluentd.{{ .Values.image.fluentd.indexname | default "microk8s" }}.%Y-%m-%d
-      logstash_format false
+      <buffer time>
+        timekey 1h # chunks per hours ("3600" also available)
+      </buffer>
     </match>
 {{ if .Values.redisserver.enabled }}
 ---
