@@ -29,7 +29,7 @@ spec:
         {{- range .paths }}
           - path: {{ . }}
             backend:
-              serviceName: {{ $fullName }}
+              serviceName: {{ $fullName }}.{{ .Values.targetNamespace }}.svc.cluster.local
               servicePort: http
         {{- end }}
   {{- end }}
