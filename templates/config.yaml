@@ -33,11 +33,24 @@ data:
     <source>
       @type tail
       path /fluentd/log/*.log
+      exclude_path ["/fluentd/log/web_access.log"]
       path_key filename
       pos_file /home/frappe/td-agent/frappe-logs.pos
-      tag frappe.${filename}
+      tag frappe.app.${filename}
       <parse>
         @type none
+      </parse>
+    </source>
+    <source>
+      @type tail
+      path /fluentd/log/web_access.log
+      path_key filename
+      pos_file /home/frappe/td-agent/frappe-web-logs.pos
+      tag frappe.access.${filename}
+      <parse>
+        @type json
+        time_key time_local
+        time_format %d/%b/%Y:%H:%M:%S %z
       </parse>
     </source>
     {{ if .Values.image.fluentd.gelfEnabled | default "true" }}
@@ -48,7 +61,7 @@ data:
       port 12201
     </source>
     {{ end }}
-    <filter **>
+    <filter frappe.app.**>
       type elasticsearch_timestamp_check
       subsecond_precision 3
     </filter>
@@ -62,12 +75,13 @@ data:
         pod_name "#{ENV['POD_NAME']}"
       </record>
     </filter>
+
     <match frappe.**>
       @type elasticsearch
       host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
       port {{ .Values.image.fluentd.elasticPort }}
       index_name fluentd.{{ .Values.image.fluentd.indexname | default "microk8s" }}.%Y-%m-%d
-      <buffer time>
+      <buffer tag, time>
         timekey 1h # chunks per hours ("3600" also available)
       </buffer>
     </match>
