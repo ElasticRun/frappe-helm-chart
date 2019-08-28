@@ -37,13 +37,13 @@ metadata:
             - name: nginx
               containerPort: 8000
               protocol: TCP
-          livenessProbe:
-            initialDelaySeconds: 10
-            failureThreshold: 5
-            timeoutSeconds: 3
-            httpGet:
-              path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
-              port: nginx
+              #livenessProbe:
+              #initialDelaySeconds: 10
+              #failureThreshold: 5
+              #timeoutSeconds: 3
+              #httpGet:
+              #path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
+              # port: nginx
           readinessProbe:
             initialDelaySeconds: 10
             failureThreshold: 5
