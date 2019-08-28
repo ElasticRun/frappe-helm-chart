@@ -4,6 +4,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
+  namespace: {{ .Values.targetNamespace }}
   labels:
 {{ include "er-frappe.labels" . | indent 4 }}
   {{- with .Values.ingress.annotations }}
@@ -29,7 +30,7 @@ spec:
         {{- range .paths }}
           - path: {{ . }}
             backend:
-              serviceName: {{ $fullName }}.{{ .Values.targetNamespace }}.svc.cluster.local
+              serviceName: {{ $fullName }}
               servicePort: http
         {{- end }}
   {{- end }}
