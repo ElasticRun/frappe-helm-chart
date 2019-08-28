@@ -20,7 +20,7 @@ persistence:
   # File share by this name must already exist in the storage account mentioned above.
   # This file share should also already have blank files named apps.txt and currentsite.txt.
   # Also copy common_site_config.json file with configuration details.
-  sharename: er-frappe-base-sites-share
+  sharename: frappe11-sites-share
   # base64 encoded storage account access key
   storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
   location: sea
@@ -110,6 +110,8 @@ image:
     externalPort: 24224
     elasticHost: elasticsearch.ntex.com
     elasticPort: 9200
+    indexname: er-bk8s-app-all
+    gelfEnabled: true
 
 imagePullSecrets: []
 nameOverride: ""
@@ -141,14 +143,10 @@ etchosts:
   - ip: 10.75.0.97
     hostnames:
       - beta-release-db.ntex.com
-  - ip: 10.75.0.97
-    hostnames:
       - release-db.ntex.com
-  - ip: 10.210.3.4
+  - ip: 10.76.0.66
     hostnames:
       - beta-release-elasticsearch.ntex.com
-  - ip: 10.210.3.4
-    hostnames:
       - release-elasticsearch.ntex.com
 
   # - ip: 1
