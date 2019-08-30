@@ -38,7 +38,15 @@ data:
       pos_file /home/frappe/td-agent/frappe-logs.pos
       tag frappe.app.${filename}
       <parse>
-        @type none
+        @type multi_format
+        <pattern>
+          format json
+          estimate_current_event true
+          time_key time_local
+        </pattern>
+        <pattern>
+          format none
+        </pattern>
       </parse>
     </source>
     <source>
@@ -48,9 +56,19 @@ data:
       pos_file /home/frappe/td-agent/frappe-web-logs.pos
       tag frappe.access.${filename}
       <parse>
-        @type json
-        time_key time_local
-        time_format %d/%b/%Y:%H:%M:%S %z
+        @type multi_format
+        <pattern>
+          format json
+          estimate_current_event true
+          time_key time_local
+          time_format %d/%b/%Y:%H:%M:%S %z
+        </pattern>
+        <pattern>
+          format none
+        </pattern>
+      </parse>
+      <parse>
+
       </parse>
     </source>
     {{ if .Values.image.fluentd.gelfEnabled | default "true" }}
@@ -75,7 +93,6 @@ data:
         pod_name "#{ENV['POD_NAME']}"
       </record>
     </filter>
-
     <match frappe.**>
       @type elasticsearch
       host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
