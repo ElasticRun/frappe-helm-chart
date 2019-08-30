@@ -67,9 +67,6 @@ data:
           format none
         </pattern>
       </parse>
-      <parse>
-
-      </parse>
     </source>
     {{ if .Values.image.fluentd.gelfEnabled | default "true" }}
     <source>
