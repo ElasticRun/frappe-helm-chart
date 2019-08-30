@@ -1,0 +1,21 @@
+# default image to be used for build
+# image: dock.elasticrun.in/wrun-node-runner:master
+# services:
+#   - docker:18.09-dind
+# variables:
+#   DOCKER_HOST: tcp://localhost:2375
+image: registry.gitlab.com/gitlab-org/cluster-integration/auto-deploy-image:v0.1.0
+stages:
+  - deploy
+
+er-frappe-chart-deploy:
+  stage: deploy
+  script:
+    - helm package .
+    - curl -u repouser:Ntex@123 --data-binary "@$(ls *.tgz)" https://helm.elasticrun.in/helm/${CI_COMMIT_REF_NAME:-develop}/api/charts
+  only:
+    - develop
+    - beta-release
+    - release
+  tags:
+    - engg-k8s
