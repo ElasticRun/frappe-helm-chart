@@ -13,6 +13,7 @@ er-frappe-chart-deploy:
   script:
     - helm init --client-only
     - helm package .
+    - ls *.tgz
     - curl -u repouser:Ntex@123 --data-binary "@$(ls *.tgz)" https://helm.elasticrun.in/helm/${CI_COMMIT_REF_NAME:-develop}/api/charts
   only:
     - develop
