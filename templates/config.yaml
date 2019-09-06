@@ -30,6 +30,9 @@ metadata:
   namespace: {{ .Values.targetNamespace }}
 data:
   fluent.conf: |
+    <system>
+      log_level debug
+    </system>
     <source>
       @type tail
       path /fluentd/log/*.log
@@ -90,13 +93,28 @@ data:
         pod_name "#{ENV['POD_NAME']}"
       </record>
     </filter>
+    <filter fluent.**>
+      @type elasticsearch_timestamp_check
+      subsecond_precision 3
+    </filter>
     <match frappe.**>
       @type elasticsearch
       host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
       port {{ .Values.image.fluentd.elasticPort }}
       index_name fluentd.{{ .Values.image.fluentd.indexname | default "microk8s" }}.%Y-%m-%d
       <buffer tag, time>
-        timekey 1h # chunks per hours ("3600" also available)
+        flush_thread_count 4
+        timekey 60 # chunks per minute
+      </buffer>
+    </match>
+    <match fluent.**>
+      @type elasticsearch
+      host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
+      port {{ .Values.image.fluentd.elasticPort }}
+      index_name fluentd.{{ .Values.image.fluentd.indexname | default "microk8s" }}.%Y-%m-%d
+      <buffer tag, time>
+        flush_thread_count 2
+        timekey 60 # chunks per minute
       </buffer>
     </match>
 {{ if .Values.redisserver.enabled }}
