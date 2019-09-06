@@ -109,12 +109,12 @@ data:
     </match>
     <match fluent.**>
       @type file
-      path /var/log/fluentd.%Y-%m-%d-%H-%M
+      path /var/log/fluentd.%Y-%m-%d-%H
       compress gzip
       append true
       <buffer time>
         flush_thread_count 2
-        timekey 60 # chunks per minute
+        timekey 3600 # chunks per hour
       </buffer>
     </match>
 {{ if .Values.redisserver.enabled }}
