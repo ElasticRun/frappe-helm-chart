@@ -48,7 +48,7 @@ metadata:
 data:
   fluent.conf: |
     <system>
-      log_level debug
+      log_level info
     </system>
     <source>
       @type tail
@@ -108,6 +108,7 @@ data:
         releasename  {{ .Release.Name }}
         pod_ip "#{ENV['POD_IP']}"
         pod_name "#{ENV['POD_NAME']}"
+        tag ${tag}
       </record>
     </filter>
     <filter fluent.**>
@@ -119,19 +120,20 @@ data:
       host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
       port {{ .Values.image.fluentd.elasticPort }}
       index_name fluentd.{{ .Values.image.fluentd.indexname | default "microk8s" }}.%Y-%m-%d
+      log_es_400_reason true
       <buffer tag, time>
         flush_thread_count 4
         timekey 60 # chunks per minute
       </buffer>
     </match>
     <match fluent.**>
-      @type elasticsearch
-      host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
-      port {{ .Values.image.fluentd.elasticPort }}
-      index_name fluentd.{{ .Values.image.fluentd.indexname | default "microk8s" }}.%Y-%m-%d
-      <buffer tag, time>
+      @type file
+      path /var/log/fluentd.%Y-%m-%d-%H
+      compress gzip
+      append true
+      <buffer time>
         flush_thread_count 2
-        timekey 60 # chunks per minute
+        timekey 3600 # chunks per hour
       </buffer>
     </match>
 {{ if .Values.redisserver.enabled }}
