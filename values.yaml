@@ -132,6 +132,8 @@ web:
     connections_per_worker: 200
     workers: 4
 
+spine:
+
 ## Optional /etc/hosts contents
 etchosts:
   - ip: 10.60.0.4

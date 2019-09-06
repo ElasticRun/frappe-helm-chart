@@ -91,6 +91,9 @@ metadata:
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:
+            - mountPath: /home/frappe/docker-bench/Procfile
+              name: er-frappe-procfile-config-vol
+              subPath: Procfile
             - mountPath: /home/frappe/docker-bench/logs
               name: er-frappe-logs-dir
             - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
@@ -156,6 +159,12 @@ metadata:
         - name: er-frappe-sites-vol
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-sites-pvc
+        - name: er-frappe-procfile-config-vol
+          configMap:
+            name : {{ .Release.Name }}-procfile-config
+            items:
+              - key : Procfile
+                path: Procfile
         - name: er-frappe-fluentd-config-vol
           configMap:
             name : {{ .Release.Name }}-fluentd-config
