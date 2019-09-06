@@ -108,11 +108,11 @@ data:
       </buffer>
     </match>
     <match fluent.**>
-      @type elasticsearch
-      host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
-      port {{ .Values.image.fluentd.elasticPort }}
-      index_name fluentd.{{ .Values.image.fluentd.indexname | default "microk8s" }}.%Y-%m-%d
-      <buffer tag, time>
+      @type file
+      path /var/log/fluentd.%Y-%m-%d-%H-%M
+      compress gzip
+      append true
+      <buffer time>
         flush_thread_count 2
         timekey 60 # chunks per minute
       </buffer>
