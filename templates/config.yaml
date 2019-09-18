@@ -18,7 +18,7 @@ data:
         "acks": "all"
       },
       "fetch.message.max.bytes": "81920",
-      "group.id": {{ printf "%s-%s" .Release.Name "-spine-client-grp" | quote }},
+      "group.id": {{ printf "%s-%s" .Release.Name "spine-client-grp" | quote }},
       "request.required.acks": "1"
     }
 ---
@@ -184,4 +184,108 @@ data:
     appendonly yes
     protected-mode no
     {{- end }}
+{{ end }}
+{{- if .Values.migration.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-migratescript-config
+  namespace: {{ .Values.targetNamespace }}
+data:
+  migrate_wrapper.sh: |-
+    echo "Trying to execute following migration scripts..."
+    echo $@
+    echo > /tmp/initscript.out
+    for script in $@
+    do
+        /bin/bash -c $script 2>&1 >> /tmp/initscript.out
+        if [ $? -ne 0 ]
+        then
+        echo "$script exited with error."
+        python3 sendmail.py
+        fi
+    done
+    true
+  sendmail.py: |-
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    import smtplib
+    import json
+    import traceback
+    from email.mime.base import MIMEBase
+
+    def mail_report():
+        # try:
+        with  open('./sendmail.conf','rb') as configFile:
+            conf = json.load(configFile)
+
+        sender = conf['mailSender']
+        auth_user = conf['mailAuthUser']
+        auth_pass = conf['mailAuthPass']
+        server = conf['mailServer']
+        port = conf['mailServerPort']
+        receiver = conf['mailReceiver']
+
+        text = """
+        hello,
+
+        There was an error while trying to initialize deployment of a frappe application.
+        Details of error -
+
+        {stderror}
+
+        Regards,
+        Elastic Run - Technology Team"""
+
+        html = """
+        <html><body><p>Hello,</p>
+
+        <p><b>There was an error while trying to initialize deployment of a frappe application.</b></p><br>
+        <p>Details of error:<br></p>
+        <pre>
+        {stderror}
+        </pre>
+        <p>Regards,<br>
+        Elastic Run - Technology Team</p>
+        </body></html>
+        """
+        scriptOutput = ""
+        with  open('/tmp/initscript.out','rb') as scriptOutputFile:
+            for line in scriptOutputFile:
+                scriptOutput = scriptOutput + line.decode("utf-8")
+
+        text = text.format(stderror=scriptOutput)
+        html = html.format(stderror=scriptOutput)
+
+        message = MIMEMultipart(
+            "alternative", None, [MIMEText(text), MIMEText(html,'html')])
+
+        message['Subject'] = "Init Container Failed"
+        message['From'] = sender
+        message['To'] = ", ".join(receiver)
+
+        server = smtplib.SMTP(server+':'+port)
+        server.ehlo()
+        server.starttls()
+        server.login(auth_user, auth_pass)
+
+        server.sendmail(sender, receiver, message.as_string())
+        server.quit()
+
+    if __name__== "__main__" :
+        try:
+            mail_report()
+        except:
+            traceback.print_exc()
+            print("error while sending mail")
+  sendmail.conf: |-
+    '{
+      "mailAuthUser":"tech@elastic.run",
+      "mailAuthPass":"PCavs401",
+      "mailServer":"smtp-relay.gmail.com",
+      "mailServerPort":"587",
+      "mailSender":"tech.support@elastic.run",
+      "mailReceiver":["ajit.pendse@elastic.run", "nikhil.sharma@elastic.run"]
+      }'
 {{ end }}

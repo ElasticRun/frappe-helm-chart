@@ -9,6 +9,17 @@ targetNamespace: frappe-base
 # Target Environment - can be only beta-release or release
 branch: release
 
+# Allows for applications to define migration strategy deployed as initContainers
+# The commands array is mandatory if this is enabled.
+# Command will be executed using the same image, env and volumes as standard application
+# Note that application will not be up and running when initContainers are executed.
+# Scripts mentioned here must be able to execute successfully even when the application is not running
+# The application containers will not be started until these scripts are completed successfully.
+migration:
+  enabled: true
+  scripts:
+    - "/home/frappe/docker-bench/migrate.sh"
+
 persistence:
   # only azure and local supported
   type: azure

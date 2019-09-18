@@ -29,6 +29,72 @@ metadata:
       hostAliases:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
+    {{- if .Values.migration.enabled }}
+    {{ "initContainers" | nindent 6 }}
+      - name: {{ .Release.Name }}-migrator
+        image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
+        imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
+        command:
+          - "/bin/bash"
+          - "-c"
+          - "/scripts/migrate_wrapper.sh"
+        {{- range .Values.migration.scripts }}
+          - {{ . }}
+        {{- end }}
+        env:
+          - name: GUNI_WORKER_CONNECTIONS
+            valueFrom:
+              configMapKeyRef:
+                  key: gunicorn.connections.per.worker
+                  name: {{ .Release.Name }}-server-config
+          - name: GUNI_WORKERS
+            valueFrom:
+              configMapKeyRef:
+                  key: gunicorn.workers
+                  name: {{ .Release.Name }}-server-config
+          - name: KAFKA_CONFIG
+            valueFrom:
+              configMapKeyRef:
+                key: kafka.config
+                name: {{ .Release.Name }}-server-config
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                key: db.host
+                name: {{ .Release.Name }}-server-config
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                key: db.name
+                name: {{ .Release.Name }}-server-config
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: db.password
+                name: {{ .Release.Name }}-secrets
+          - name: ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin.password
+                name: {{ .Release.Name }}-secrets
+         volumeMounts:
+          - mountPath: /scripts
+            name: er-frappe-migratescripts-config-vol
+          - mountPath: /home/frappe/docker-bench/logs
+            name: er-frappe-logs-dir
+          - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
+            name: er-frappe-sites-vol
+            subPath: "site1.docker"
+          - mountPath: "/home/frappe/docker-bench/sites/currentsite.txt"
+            name: er-frappe-sites-vol
+            subPath: "currentsite.txt"
+          - mountPath: "/home/frappe/docker-bench/sites/apps.txt"
+            name: er-frappe-sites-vol
+            subPath: "apps.txt"
+          - mountPath: "/home/frappe/docker-bench/sites/common_site_config.json"
+            name: er-frappe-sites-vol
+            subPath: "common_site_config.json"
+    {{ -end -}}
       {{ "containers:" | nindent 6 }}
         - name: frappe
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
@@ -175,6 +241,11 @@ metadata:
         # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
         - name : er-frappe-logs-dir
           emptyDir: {}
+        {{- if .Values.migration.enabled }}
+        - name : er-frappe-migratescripts-config-vol
+          configMap:
+            name : {{ .Release.Name }}-migratescript-config
+        {{- end }}
 {{ if .Values.redisserver.enabled }}
 ---
 apiVersion: apps/v1
