@@ -3,5 +3,5 @@ appVersion: "1.0"
 description: A Helm chart for deploying Frappe/ERPNext based applications on a Kubernetes cluster
 name: er-frappe
 version: 0.2.0
-kubeVersion: ">=1.13.5"
-tillerVersion: ">=2.14.0"
+#kubeVersion: ">=1.13.5"
+#tillerVersion: ">=2.14.0"
