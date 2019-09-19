@@ -94,7 +94,7 @@ metadata:
           - mountPath: "/home/frappe/docker-bench/sites/common_site_config.json"
             name: er-frappe-sites-vol
             subPath: "common_site_config.json"
-    {{ -end -}}
+    {{- end -}}
       {{ "containers:" | nindent 6 }}
         - name: frappe
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
