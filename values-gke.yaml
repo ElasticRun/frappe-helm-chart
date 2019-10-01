@@ -9,11 +9,22 @@ targetNamespace: frappe11
 # Target Environment - can be only beta-release or release
 branch: release
 
+# Allows for applications to define migration strategy deployed as initContainers
+# The commands array is mandatory if this is enabled.
+# Command will be executed using the same image, env and volumes as standard application
+# Note that application will not be up and running when initContainers are executed.
+# Scripts mentioned here must be able to execute successfully even when the application is not running
+# The application containers will not be started until these scripts are completed successfully.
+migration:
+  enabled: false
+  scripts:
+    - "/home/frappe/docker-bench/migrate.sh"
+
 persistence:
   # only azure, gke and local supported
   type: gke
-  # only 'file' or 'disk' supported for azure. Ignored for local
-  subtype: gce-pd
+  # only 'file' or 'disk' supported for azure. Ignored for local. gce-pd and nfs supported for GKE.
+  subtype: nfs
   capacityInGi: 10
   # Storage account should already exist. Used only for type: azure
   #storageaccount: erbk8sappall
@@ -25,10 +36,15 @@ persistence:
   # base64 encoded storage account access key. Used only for type: azure
   #storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
   #location: sea
-  # Type & replication for persistent disk used in GKE - used only for type: gke
+  # Type & replication for persistent disk used in GKE - used only for type: gke, subtype: gce-pd
   pdType: pd-standard
   replicationType: none
   pdName: er-bk8s-trun-site-pd
+  # NFS Server Details along with path which should be used to hold site data - used only for type: gke, subtype: nfs
+  nfsServer: "10.68.0.2"
+  # Base path where the files will be saved. Release name directory is expected to exist in this path.
+  # The actual files should exist within the directory named with release name.
+  nfsBasePath: /erbk8sappall/ntex-vol/non-prod-apps/er-bk8s-app-all/default
 
 redisserver:
   enabled: true
