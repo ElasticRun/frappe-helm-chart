@@ -100,7 +100,7 @@ metadata:
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           args:
-             ["/bin/sh", "-c", "./entrypoint.sh", "spine-dispatcher:*"]
+             ["/bin/sh", "-c", "./entrypoint.sh spine-dispatcher:*"]
           ports:
             - name: nginx
               containerPort: 8000
@@ -343,11 +343,11 @@ metadata:
     #         subPath: "common_site_config.json"
     # {{- end -}}
       {{ "containers:" | nindent 6 }}
-        - name: frappe-long-worker
+        - name: frappe-scheduler
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           args:
-             ["/bin/sh", "-c", "./entrypoint.sh", "scheduler:*"]
+             ["/bin/sh", "-c", "./entrypoint.sh scheduler:*"]
           ports:
             - name: nginx
               containerPort: 8000
@@ -588,7 +588,7 @@ metadata:
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           args:
-             ["/bin/sh", "-c", "./entrypoint.sh", "long-worker:*"]
+             ["/bin/sh", "-c", "./entrypoint.sh long-worker:*"]
           ports:
             - name: nginx
               containerPort: 8000
@@ -829,7 +829,7 @@ metadata:
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           args:
-             ["/bin/sh", "-c", "./entrypoint.sh", "docker-bench-web:*"]
+             ["/bin/sh", "-c", "./entrypoint.sh docker-bench-web:*"]
           ports:
             - name: nginx
               containerPort: 8000
