@@ -165,7 +165,7 @@ etchosts:
     hostnames:
       - beta-release-db.ntex.com
       - release-db.ntex.com
-  - ip: 10.76.0.66
+  - ip: 10.70.0.8
     hostnames:
       - beta-release-elasticsearch.ntex.com
       - release-elasticsearch.ntex.com
