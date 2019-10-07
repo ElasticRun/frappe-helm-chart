@@ -732,7 +732,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ include "er-frappe.fullname" . }}
-  labels:
+  labels:    
 {{ include "er-frappe.labels" . | indent 4 }}
   {{- if .Values.targetNamespace }}
   namespace: {{ .Values.targetNamespace }}
@@ -744,11 +744,13 @@ metadata:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/role: "web"
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "er-frappe.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: "web"
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
