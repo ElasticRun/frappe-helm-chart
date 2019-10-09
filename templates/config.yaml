@@ -142,6 +142,7 @@ data:
     export SOCKETIO_HOST={{ .Release.Name | replace " " "-" }}-socketio-ntex-com:{{ default .Values.redisserver.socketio.service.port 12000 }}
     export GUNI_WORKER_CONNECTIONS={{ default .Values.web.gunicorn.connections_per_worker 200  }}
     export GUNI_WORKERS={{ default .Values.web.gunicorn.workers 4 }}
+    export BENCH_LOG_FILE=/home/frappe/${BENCH_NAME}/logs/console.log
 {{ if .Values.redisserver.enabled }}
 ---
 apiVersion: v1
