@@ -15,11 +15,13 @@ metadata:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/role: "spine-dispatcher"
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "er-frappe.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: "spine-dispatcher"
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -29,116 +31,26 @@ metadata:
       hostAliases:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
-    # {{- if .Values.migration.enabled }}
-    # {{ "initContainers" | nindent 6 }}
-    #   - name: {{ .Release.Name }}-migrator
-    #     image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
-    #     imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
-    #     command:
-    #       - "/bin/bash"
-    #       - "-c"
-    #       - "/scripts/migrate_wrapper.sh"
-    #     {{- range .Values.migration.scripts }}
-    #       - {{ . }}
-    #     {{- end }}
-    #     env:
-    #       - name: GUNI_WORKER_CONNECTIONS
-    #         valueFrom:
-    #           configMapKeyRef:
-    #               key: gunicorn.connections.per.worker
-    #               name: {{ .Release.Name }}-server-config
-    #       - name: GUNI_WORKERS
-    #         valueFrom:
-    #           configMapKeyRef:
-    #               key: gunicorn.workers
-    #               name: {{ .Release.Name }}-server-config
-    #       - name: KAFKA_CONFIG
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: kafka.config
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_HOST
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: db.host
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_NAME
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: db.name
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_PASSWORD
-    #         valueFrom:
-    #           secretKeyRef:
-    #             key: db.password
-    #             name: {{ .Release.Name }}-secrets
-    #       - name: ADMIN_PASSWORD
-    #         valueFrom:
-    #           secretKeyRef:
-    #             key: admin.password
-    #             name: {{ .Release.Name }}-secrets
-    #      volumeMounts:
-    #       - mountPath: /scripts
-    #         name: er-frappe-migratescripts-config-vol
-    #       - mountPath: /home/frappe/docker-bench/logs
-    #         name: er-frappe-logs-dir
-    #       - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
-    #         name: er-frappe-sites-vol
-    #         subPath: "site1.docker"
-    #       - mountPath: "/home/frappe/docker-bench/sites/currentsite.txt"
-    #         name: er-frappe-sites-vol
-    #         subPath: "currentsite.txt"
-    #       - mountPath: "/home/frappe/docker-bench/sites/apps.txt"
-    #         name: er-frappe-sites-vol
-    #         subPath: "apps.txt"
-    #       - mountPath: "/home/frappe/docker-bench/sites/common_site_config.json"
-    #         name: er-frappe-sites-vol
-    #         subPath: "common_site_config.json"
-    # {{- end -}}
       {{ "containers:" | nindent 6 }}
         - name: spine-dispatcher
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           args:
              ["/bin/sh", "-c", "./entrypoint.sh spine-dispatcher:*"]
-          ports:
-            - name: nginx
-              containerPort: 8000
-              protocol: TCP
-              #livenessProbe:
-              #initialDelaySeconds: 10
-              #failureThreshold: 5
-              #timeoutSeconds: 3
-              #httpGet:
-              #path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
-              # port: nginx
           readinessProbe:
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             failureThreshold: 5
             timeoutSeconds: 3
-            httpGet:
-              path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
-              port: nginx
+            exec:
+              command:
+                - "/home/frappe/docker-bench/checkjobhealth.sh spine-dispatcher:*"
           env:
-            - name: GUNI_WORKER_CONNECTIONS
-              valueFrom:
-                configMapKeyRef:
-                    key: gunicorn.connections.per.worker
-                    name: {{ .Release.Name }}-server-config
-            - name: GUNI_WORKERS
-              valueFrom:
-                configMapKeyRef:
-                    key: gunicorn.workers
-                    name: {{ .Release.Name }}-server-config
+            - name: RELEASE_NAME
+              value: {{ .Release.Name | quote }}
             - name: KAFKA_CONFIG
               valueFrom:
                 configMapKeyRef:
                   key: kafka.config
-                  name: {{ .Release.Name }}-server-config
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  key: db.host
                   name: {{ .Release.Name }}-server-config
             - name: DB_NAME
               valueFrom:
@@ -159,6 +71,8 @@ metadata:
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:
+            - mountPath: /home/frappe/docker-bench/config/env
+              name: er-frappe-bench-env
             - mountPath: /home/frappe/docker-bench/logs
               name: er-frappe-logs-dir
             - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
@@ -224,18 +138,16 @@ metadata:
         - name: er-frappe-sites-vol
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-sites-pvc
-        # - name: er-frappe-procfile-config-vol
-        #   configMap:
-        #     name : {{ .Release.Name }}-procfile-config
-        #     items:
-        #       - key : Procfile
-        #         path: Procfile
         - name: er-frappe-fluentd-config-vol
           configMap:
             name : {{ .Release.Name }}-fluentd-config
             items:
             - key : fluent.conf
               path: fluent.conf
+        - name: er-frappe-bench-env
+          configMap:
+            name: {{ .Release.Name | replace " " "-" }}-bench-env
+          defaultMode: 0755
         # Volume used for sharing log files between fluentd and frappe containers.
         # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
         - name : er-frappe-logs-dir
@@ -262,11 +174,13 @@ metadata:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/role: "scheduler"
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "er-frappe.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: "scheduler"
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -276,82 +190,16 @@ metadata:
       hostAliases:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
-    # {{- if .Values.migration.enabled }}
-    # {{ "initContainers" | nindent 6 }}
-    #   - name: {{ .Release.Name }}-migrator
-    #     image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
-    #     imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
-    #     command:
-    #       - "/bin/bash"
-    #       - "-c"
-    #       - "/scripts/migrate_wrapper.sh"
-    #     {{- range .Values.migration.scripts }}
-    #       - {{ . }}
-    #     {{- end }}
-    #     env:
-    #       - name: GUNI_WORKER_CONNECTIONS
-    #         valueFrom:
-    #           configMapKeyRef:
-    #               key: gunicorn.connections.per.worker
-    #               name: {{ .Release.Name }}-server-config
-    #       - name: GUNI_WORKERS
-    #         valueFrom:
-    #           configMapKeyRef:
-    #               key: gunicorn.workers
-    #               name: {{ .Release.Name }}-server-config
-    #       - name: KAFKA_CONFIG
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: kafka.config
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_HOST
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: db.host
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_NAME
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: db.name
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_PASSWORD
-    #         valueFrom:
-    #           secretKeyRef:
-    #             key: db.password
-    #             name: {{ .Release.Name }}-secrets
-    #       - name: ADMIN_PASSWORD
-    #         valueFrom:
-    #           secretKeyRef:
-    #             key: admin.password
-    #             name: {{ .Release.Name }}-secrets
-    #      volumeMounts:
-    #       - mountPath: /scripts
-    #         name: er-frappe-migratescripts-config-vol
-    #       - mountPath: /home/frappe/docker-bench/logs
-    #         name: er-frappe-logs-dir
-    #       - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
-    #         name: er-frappe-sites-vol
-    #         subPath: "site1.docker"
-    #       - mountPath: "/home/frappe/docker-bench/sites/currentsite.txt"
-    #         name: er-frappe-sites-vol
-    #         subPath: "currentsite.txt"
-    #       - mountPath: "/home/frappe/docker-bench/sites/apps.txt"
-    #         name: er-frappe-sites-vol
-    #         subPath: "apps.txt"
-    #       - mountPath: "/home/frappe/docker-bench/sites/common_site_config.json"
-    #         name: er-frappe-sites-vol
-    #         subPath: "common_site_config.json"
-    # {{- end -}}
       {{ "containers:" | nindent 6 }}
         - name: frappe-scheduler
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           args:
              ["/bin/sh", "-c", "./entrypoint.sh scheduler:*"]
-          ports:
-            - name: nginx
-              containerPort: 8000
-              protocol: TCP
+          # ports:
+          #   - name: nginx
+          #     containerPort: 8000
+          #     protocol: TCP
               #livenessProbe:
               #initialDelaySeconds: 10
               #failureThreshold: 5
@@ -363,20 +211,12 @@ metadata:
             initialDelaySeconds: 10
             failureThreshold: 5
             timeoutSeconds: 3
-            httpGet:
-              path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
-              port: nginx
+            exec:
+              command:
+                - "/home/frappe/docker-bench/checkjobhealth.sh scheduler:*"
           env:
-            - name: GUNI_WORKER_CONNECTIONS
-              valueFrom:
-                configMapKeyRef:
-                    key: gunicorn.connections.per.worker
-                    name: {{ .Release.Name }}-server-config
-            - name: GUNI_WORKERS
-              valueFrom:
-                configMapKeyRef:
-                    key: gunicorn.workers
-                    name: {{ .Release.Name }}-server-config
+            - name: RELEASE_NAME
+              value: {{ .Release.Name | quote }}
             - name: KAFKA_CONFIG
               valueFrom:
                 configMapKeyRef:
@@ -406,6 +246,8 @@ metadata:
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:
+            - mountPath: /home/frappe/docker-bench/config/env
+              name: er-frappe-bench-env
             - mountPath: /home/frappe/docker-bench/logs
               name: er-frappe-logs-dir
             - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
@@ -477,6 +319,10 @@ metadata:
             items:
             - key : fluent.conf
               path: fluent.conf
+        - name: er-frappe-bench-env
+          configMap:
+            name: {{ .Release.Name | replace " " "-" }}-bench-env
+          defaultMode: 0755
         # Volume used for sharing log files between fluentd and frappe containers.
         # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
         - name : er-frappe-logs-dir
@@ -503,11 +349,13 @@ metadata:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/role: "long-worker"
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "er-frappe.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: "long-worker"
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -517,82 +365,16 @@ metadata:
       hostAliases:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
-    # {{- if .Values.migration.enabled }}
-    # {{ "initContainers" | nindent 6 }}
-    #   - name: {{ .Release.Name }}-migrator
-    #     image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
-    #     imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
-    #     command:
-    #       - "/bin/bash"
-    #       - "-c"
-    #       - "/scripts/migrate_wrapper.sh"
-    #     {{- range .Values.migration.scripts }}
-    #       - {{ . }}
-    #     {{- end }}
-    #     env:
-    #       - name: GUNI_WORKER_CONNECTIONS
-    #         valueFrom:
-    #           configMapKeyRef:
-    #               key: gunicorn.connections.per.worker
-    #               name: {{ .Release.Name }}-server-config
-    #       - name: GUNI_WORKERS
-    #         valueFrom:
-    #           configMapKeyRef:
-    #               key: gunicorn.workers
-    #               name: {{ .Release.Name }}-server-config
-    #       - name: KAFKA_CONFIG
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: kafka.config
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_HOST
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: db.host
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_NAME
-    #         valueFrom:
-    #           configMapKeyRef:
-    #             key: db.name
-    #             name: {{ .Release.Name }}-server-config
-    #       - name: DB_PASSWORD
-    #         valueFrom:
-    #           secretKeyRef:
-    #             key: db.password
-    #             name: {{ .Release.Name }}-secrets
-    #       - name: ADMIN_PASSWORD
-    #         valueFrom:
-    #           secretKeyRef:
-    #             key: admin.password
-    #             name: {{ .Release.Name }}-secrets
-    #      volumeMounts:
-    #       - mountPath: /scripts
-    #         name: er-frappe-migratescripts-config-vol
-    #       - mountPath: /home/frappe/docker-bench/logs
-    #         name: er-frappe-logs-dir
-    #       - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
-    #         name: er-frappe-sites-vol
-    #         subPath: "site1.docker"
-    #       - mountPath: "/home/frappe/docker-bench/sites/currentsite.txt"
-    #         name: er-frappe-sites-vol
-    #         subPath: "currentsite.txt"
-    #       - mountPath: "/home/frappe/docker-bench/sites/apps.txt"
-    #         name: er-frappe-sites-vol
-    #         subPath: "apps.txt"
-    #       - mountPath: "/home/frappe/docker-bench/sites/common_site_config.json"
-    #         name: er-frappe-sites-vol
-    #         subPath: "common_site_config.json"
-    # {{- end -}}
       {{ "containers:" | nindent 6 }}
         - name: frappe-long-worker
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           args:
              ["/bin/sh", "-c", "./entrypoint.sh long-worker:*"]
-          ports:
-            - name: nginx
-              containerPort: 8000
-              protocol: TCP
+          # ports:
+          #   - name: nginx
+          #     containerPort: 8000
+          #     protocol: TCP
               #livenessProbe:
               #initialDelaySeconds: 10
               #failureThreshold: 5
@@ -604,29 +386,16 @@ metadata:
             initialDelaySeconds: 10
             failureThreshold: 5
             timeoutSeconds: 3
-            httpGet:
-              path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
-              port: nginx
+            exec:
+              command:
+                - "/home/frappe/docker-bench/checkjobhealth.sh long-worker:*"
           env:
-            - name: GUNI_WORKER_CONNECTIONS
-              valueFrom:
-                configMapKeyRef:
-                    key: gunicorn.connections.per.worker
-                    name: {{ .Release.Name }}-server-config
-            - name: GUNI_WORKERS
-              valueFrom:
-                configMapKeyRef:
-                    key: gunicorn.workers
-                    name: {{ .Release.Name }}-server-config
+            - name: RELEASE_NAME
+              value: {{ .Release.Name | quote }}
             - name: KAFKA_CONFIG
               valueFrom:
                 configMapKeyRef:
                   key: kafka.config
-                  name: {{ .Release.Name }}-server-config
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  key: db.host
                   name: {{ .Release.Name }}-server-config
             - name: DB_NAME
               valueFrom:
@@ -647,6 +416,8 @@ metadata:
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:
+            - mountPath: /home/frappe/docker-bench/config/env
+              name: er-frappe-bench-env
             - mountPath: /home/frappe/docker-bench/logs
               name: er-frappe-logs-dir
             - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
@@ -718,6 +489,10 @@ metadata:
             items:
             - key : fluent.conf
               path: fluent.conf
+        - name: er-frappe-bench-env
+          configMap:
+            name: {{ .Release.Name | replace " " "-" }}-bench-env
+          defaultMode: 0755
         # Volume used for sharing log files between fluentd and frappe containers.
         # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
         - name : er-frappe-logs-dir
@@ -732,14 +507,14 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ include "er-frappe.fullname" . }}
-  labels:    
+  labels:
 {{ include "er-frappe.labels" . | indent 4 }}
   {{- if .Values.targetNamespace }}
   namespace: {{ .Values.targetNamespace }}
   {{- end -}}
 {{- "spec:" | nindent 0 }}
   serviceName: {{ .Release.Name | replace " " "-" }}
-  replicas: {{ .Values.replicaCount | default 1 }}
+  replicas: {{ default .Values.replicaCount 1 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}
@@ -773,25 +548,12 @@ metadata:
           - {{ . }}
         {{- end }}
         env:
-          - name: GUNI_WORKER_CONNECTIONS
-            valueFrom:
-              configMapKeyRef:
-                  key: gunicorn.connections.per.worker
-                  name: {{ .Release.Name }}-server-config
-          - name: GUNI_WORKERS
-            valueFrom:
-              configMapKeyRef:
-                  key: gunicorn.workers
-                  name: {{ .Release.Name }}-server-config
+          - name: RELEASE_NAME
+            value: {{ .Release.Name | quote }}
           - name: KAFKA_CONFIG
             valueFrom:
               configMapKeyRef:
                 key: kafka.config
-                name: {{ .Release.Name }}-server-config
-          - name: DB_HOST
-            valueFrom:
-              configMapKeyRef:
-                key: db.host
                 name: {{ .Release.Name }}-server-config
           - name: DB_NAME
             valueFrom:
@@ -851,25 +613,12 @@ metadata:
               path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
               port: nginx
           env:
-            - name: GUNI_WORKER_CONNECTIONS
-              valueFrom:
-                configMapKeyRef:
-                    key: gunicorn.connections.per.worker
-                    name: {{ .Release.Name }}-server-config
-            - name: GUNI_WORKERS
-              valueFrom:
-                configMapKeyRef:
-                    key: gunicorn.workers
-                    name: {{ .Release.Name }}-server-config
+            - name: RELEASE_NAME
+              value: {{ .Release.Name | quote }}
             - name: KAFKA_CONFIG
               valueFrom:
                 configMapKeyRef:
                   key: kafka.config
-                  name: {{ .Release.Name }}-server-config
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  key: db.host
                   name: {{ .Release.Name }}-server-config
             - name: DB_NAME
               valueFrom:
@@ -890,6 +639,8 @@ metadata:
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:
+            - mountPath: /home/frappe/docker-bench/config/env
+              name: er-frappe-bench-env
             - mountPath: /home/frappe/docker-bench/logs
               name: er-frappe-logs-dir
             - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
@@ -961,6 +712,10 @@ metadata:
             items:
             - key : fluent.conf
               path: fluent.conf
+        - name: er-frappe-bench-env
+          configMap:
+            name: {{ .Release.Name | replace " " "-" }}-bench-env
+          defaultMode: 0755
         # Volume used for sharing log files between fluentd and frappe containers.
         # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
         - name : er-frappe-logs-dir
@@ -1059,7 +814,7 @@ metadata:
       containers:
       - name: redis-cache
         image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
-        imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
+        imagePullPolicy: {{ default .Values.redisserver.image.pullPolicy "Always" }}
         command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_queue.conf"]
         env:
         - name: POD_IP

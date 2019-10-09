@@ -5,9 +5,9 @@ metadata:
   name: {{ .Release.Name }}-server-config
   namespace: {{ .Values.targetNamespace }}
 data:
-  gunicorn.connections.per.worker: {{ .Values.web.gunicorn.connections_per_worker | default 200 | quote }}
-  gunicorn.workers: {{ .Values.web.gunicorn.workers | default 4 | quote }}
-  db.host: {{ .Release.Name }}-db-ntex-com
+  # gunicorn.connections.per.worker: {{ .Values.web.gunicorn.connections_per_worker | default 200 | quote }}
+  # gunicorn.workers: {{ .Values.web.gunicorn.workers | default 4 | quote }}
+  # db.host: {{ .Release.Name }}-db-ntex-com
   db.name: {{ .Values.site.dbname }}
   kafka.config: |
     {
@@ -118,6 +118,30 @@ data:
         timekey 3600 # chunks per hour
       </buffer>
     </match>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-bench-env
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+data:
+  bench.env: |
+    export BENCH_NAME=docker-bench
+    export BENCH_HOME=/home/frappe/${BENCH_NAME}
+    {{- if .Values.targetNamespace }}
+    export NAMESPACE={{ .Values.targetNamespace }}
+    {{- end }}
+    export SITE=site1.docker
+    export DB_HOST={{ .Release.Name | replace " " "-" }}-db-ntex-com
+    # export DB_PASSWORD=${DB_PASSWORD}
+    # export ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    export CACHE_HOST={{ .Release.Name | replace " " "-" }}-cache-ntex-com:{{ default .Values.redisserver.cache.service.port 13000 }}
+    export QUEUE_HOST={{ .Release.Name | replace " " "-" }}-queue-ntex-com:{{ default .Values.redisserver.queue.service.port 11000 }}
+    export SOCKETIO_HOST={{ .Release.Name | replace " " "-" }}-socketio-ntex-com:{{ default .Values.redisserver.socketio.service.port 12000 }}
+    export GUNI_WORKER_CONNECTIONS={{ default .Values.web.gunicorn.connections_per_worker 200  }}
+    export GUNI_WORKERS={{ default .Values.web.gunicorn.workers 4 }}
 {{ if .Values.redisserver.enabled }}
 ---
 apiVersion: v1
