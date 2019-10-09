@@ -39,7 +39,7 @@ metadata:
              ["/bin/sh", "-c", "./entrypoint.sh spine-dispatcher:*"]
           securityContext:
             runAsUser: 1001
-            allowPrivilegeEscalation: false
+            #allowPrivilegeEscalation: false
           livenessProbe:
             initialDelaySeconds: 5
             failureThreshold: 5
@@ -212,7 +212,7 @@ metadata:
               # port: nginx
           securityContext:
             runAsUser: 1001
-            allowPrivilegeEscalation: false
+            #allowPrivilegeEscalation: false
           livenessProbe:
             initialDelaySeconds: 10
             failureThreshold: 5
@@ -390,7 +390,7 @@ metadata:
               # port: nginx
           securityContext:
             runAsUser: 1001
-            allowPrivilegeEscalation: false
+            #allowPrivilegeEscalation: false
           livenessProbe:
             initialDelaySeconds: 10
             failureThreshold: 5
@@ -558,7 +558,7 @@ metadata:
         {{- end }}
         securityContext:
           runAsUser: 1001
-          allowPrivilegeEscalation: false
+          #allowPrivilegeEscalation: false
         env:
           - name: RELEASE_NAME
             value: {{ .Release.Name | quote }}
@@ -619,7 +619,7 @@ metadata:
               # port: nginx
           securityContext:
             runAsUser: 1001
-            allowPrivilegeEscalation: false
+            #allowPrivilegeEscalation: false
           livenessProbe:
             initialDelaySeconds: 10
             failureThreshold: 5
