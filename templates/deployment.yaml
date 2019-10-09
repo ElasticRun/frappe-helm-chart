@@ -630,6 +630,16 @@ metadata:
           env:
             - name: RELEASE_NAME
               value: {{ .Release.Name | quote }}
+            - name: GUNI_WORKER_CONNECTIONS
+              valueFrom:
+                configMapKeyRef:
+                    key: gunicorn.connections.per.worker
+                    name: {{ .Release.Name }}-server-config
+            - name: GUNI_WORKERS
+              valueFrom:
+                configMapKeyRef:
+                    key: gunicorn.workers
+                    name: {{ .Release.Name }}-server-config
             - name: KAFKA_CONFIG
               valueFrom:
                 configMapKeyRef:

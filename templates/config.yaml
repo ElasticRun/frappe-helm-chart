@@ -5,8 +5,8 @@ metadata:
   name: {{ .Release.Name }}-server-config
   namespace: {{ .Values.targetNamespace }}
 data:
-  # gunicorn.connections.per.worker: {{ .Values.web.gunicorn.connections_per_worker | default 200 | quote }}
-  # gunicorn.workers: {{ .Values.web.gunicorn.workers | default 4 | quote }}
+  gunicorn.connections.per.worker: {{ .Values.web.gunicorn.connections_per_worker | default 200 | quote }}
+  gunicorn.workers: {{ .Values.web.gunicorn.workers | default 4 | quote }}
   # db.host: {{ .Release.Name }}-db-ntex-com
   db.name: {{ .Values.site.dbname }}
   kafka.config: |
