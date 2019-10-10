@@ -13,7 +13,7 @@ data:
     {
       "auto.offset.reset": "smallest",
       "bootstrap.servers": "{{ .Values.branch }}-spine.ntex.com:10180",
-      "client.id": {{ printf "%s-%s" .Release.Name "-spine-client" | quote }},
+      "client.id": {{ printf "%s-%s" .Release.Name "spine-client" | quote }},
       "default.topic.config": {
         "acks": "all"
       },
