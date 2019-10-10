@@ -9,6 +9,16 @@ targetNamespace: frappe11
 # Target Environment - can be only beta-release or release
 branch: release
 
+# Control which components are to be enabled as part of this deployment.
+# Ideally, all components should be deployed as part of single deployment
+# However, in exceptional cases, where a specific component is not required,
+# it can be disabled below by setting the corresponding value as false.
+components:
+  web: true
+  scheduler: true
+  longworker: true
+  spinedispatcher: true
+
 # Allows for applications to define migration strategy deployed as initContainers
 # The commands array is mandatory if this is enabled.
 # Command will be executed using the same image, env and volumes as standard application

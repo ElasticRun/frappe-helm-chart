@@ -1,0 +1,200 @@
+{{ if default true .Values.redisserver.enabled }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-cache
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: {{ if .Values.redisserver.cache.clusterEnabled }} {{ .Values.redisserver.cache.replicaCount | default 6 -}}{{ else }} 1{{ end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name | replace " " "-" }}-redis-cache
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | replace " " "-" }}-redis-cache
+    spec:
+      containers:
+      - name: redis-cache
+        image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
+        imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
+        command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_cache.conf"]
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        stdin: true
+        tty: true
+        resources: {}
+          # limits:
+          #   memory: "256Mi"
+          #   cpu: "100m"
+        ports:
+          - containerPort: {{ .Values.redisserver.cache.listenport  | default 6379}}
+            name: client
+          - containerPort: {{ add .Values.redisserver.cache.listenport 10000 }}
+            name: gossip
+        volumeMounts:
+        - mountPath: /etc/conf.d
+          name: er-redis-config
+          readOnly: true
+        - mountPath: /data
+          name: data
+          readOnly: false
+      restartPolicy: Always
+      volumes:
+      - name : er-redis-config
+        configMap:
+          name: {{ .Release.Name | replace " " "-" }}-redis-config
+          defaultMode: 0755
+      {{- if .Values.redisserver.cache.persistence.enabled | default false -}}
+  {{- "volumeClaimTemplates:" | nindent 2 }}
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.redisserver.cache.persistence.storageCapacityinGi  | default 1 -}}Gi
+      {{ else }}
+      - name: data
+        emptyDir: {}
+      {{ end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-queue
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: {{ if .Values.redisserver.queue.clusterEnabled }} {{ .Values.redisserver.queue.replicaCount | default 6 -}}{{ else }} 1{{ end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name | replace " " "-" }}-redis-queue
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | replace " " "-" }}-redis-queue
+    spec:
+      containers:
+      - name: redis-cache
+        image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
+        imagePullPolicy: {{ default .Values.redisserver.image.pullPolicy "Always" }}
+        command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_queue.conf"]
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        stdin: true
+        tty: true
+        resources: {}
+          # limits:
+          #   memory: "256Mi"
+          #   cpu: "100m"
+        ports:
+          - containerPort: {{ .Values.redisserver.queue.listenport  | default 6379}}
+            name: client
+          - containerPort: {{ add .Values.redisserver.queue.listenport 10000 }}
+            name: gossip
+        volumeMounts:
+        - mountPath: /etc/conf.d
+          name: er-redis-config
+          readOnly: true
+        - mountPath: /data
+          name: data
+          readOnly: false
+      restartPolicy: Always
+      volumes:
+      - name : er-redis-config
+        configMap:
+          name: {{ .Release.Name | replace " " "-" }}-redis-config
+          defaultMode: 0755
+      {{- if .Values.redisserver.queue.persistence.enabled | default false -}}
+  {{- "volumeClaimTemplates:" | nindent 2 }}
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.redisserver.queue.persistence.storageCapacityinGi  | default 1 -}}Gi
+      {{ else }}
+      - name: data
+        emptyDir: {}
+      {{ end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-socketio
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: {{ if .Values.redisserver.socketio.clusterEnabled }} {{ .Values.redisserver.socketio.replicaCount | default 6 -}}{{ else }} 1{{ end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name | replace " " "-" }}-redis-socketio
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | replace " " "-" }}-redis-socketio
+    spec:
+      containers:
+      - name: redis-cache
+        image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
+        imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
+        command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_socketio.conf"]
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        stdin: true
+        tty: true
+        resources: {}
+          # limits:
+          #   memory: "256Mi"
+          #   cpu: "100m"
+        ports:
+          - containerPort: {{ .Values.redisserver.socketio.listenport  | default 6379}}
+            name: client
+          - containerPort: {{ add .Values.redisserver.socketio.listenport 10000 }}
+            name: gossip
+        volumeMounts:
+        - mountPath: /etc/conf.d
+          name: er-redis-config
+          readOnly: true
+        - mountPath: /data
+          name: data
+          readOnly: false
+      restartPolicy: Always
+      volumes:
+      - name : er-redis-config
+        configMap:
+          name: {{ .Release.Name | replace " " "-" }}-redis-config
+          defaultMode: 0755
+      {{- if .Values.redisserver.socketio.persistence.enabled | default false -}}
+  {{- "volumeClaimTemplates:" | nindent 2 }}
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.redisserver.socketio.persistence.storageCapacityinGi  | default 1 -}}Gi
+      {{ else }}
+      - name: data
+        emptyDir: {}
+      {{ end }}
+{{- end -}}
