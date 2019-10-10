@@ -1,4 +1,4 @@
-{{ if .Values.redisserver.enabled }}
+{{ if eq ((default true .Values.redisserver.enabled ) true) }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
