@@ -134,7 +134,8 @@ data:
     export NAMESPACE={{ .Values.targetNamespace }}
     {{- end }}
     export SITE=site1.docker
-    export DB_HOST={{ .Release.Name | replace " " "-" }}-db-ntex-com
+    # This value must match hostAliases added in deployment.yaml for all statefulsets
+    export DB_HOST={{ .Release.Name | replace " " "-" }}-db.ntex.com
     # export DB_PASSWORD=${DB_PASSWORD}
     # export ADMIN_PASSWORD=${ADMIN_PASSWORD}
     export CACHE_HOST={{ .Release.Name | replace " " "-" }}-cache-ntex-com:{{ default .Values.redisserver.cache.service.port 13000 }}

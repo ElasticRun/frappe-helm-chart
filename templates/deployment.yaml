@@ -27,8 +27,11 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+    hostAliases:
+      - ip: {{ .Values.db.hostIP }}
+        hostnames:
+          - {{ .Release.Name | replace " " "-" }}-db.ntex.com
     {{- with .Values.etchosts }}
-      hostAliases:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
       {{ "containers:" | nindent 6 }}
@@ -189,9 +192,12 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+    hostAliases:
+      - ip: {{ .Values.db.hostIP }}
+        hostnames:
+          - {{ .Release.Name | replace " " "-" }}-db.ntex.com
     {{- with .Values.etchosts }}
-      hostAliases:
-        {{- toYaml . | nindent 8 -}}
+      {{ toYaml . | nindent 8 -}}
     {{- end -}}
       {{ "containers:" | nindent 6 }}
         - name: frappe-scheduler
@@ -362,8 +368,11 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+    hostAliases:
+      - ip: {{ .Values.db.hostIP }}
+        hostnames:
+          - {{ .Release.Name | replace " " "-" }}-db.ntex.com
     {{- with .Values.etchosts }}
-      hostAliases:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
       {{ "containers:" | nindent 6 }}
@@ -535,8 +544,11 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+    hostAliases:
+      - ip: {{ .Values.db.hostIP }}
+        hostnames:
+          - {{ .Release.Name | replace " " "-" }}-db.ntex.com
     {{- with .Values.etchosts }}
-      hostAliases:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
     {{- if .Values.migration.enabled }}
