@@ -27,7 +27,7 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-    hostAliases:
+      hostAliases:
       - ip: {{ .Values.db.hostIP }}
         hostnames:
           - {{ .Release.Name | replace " " "-" }}-db.ntex.com
@@ -192,7 +192,7 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-    hostAliases:
+      hostAliases:
       - ip: {{ .Values.db.hostIP }}
         hostnames:
           - {{ .Release.Name | replace " " "-" }}-db.ntex.com
@@ -368,7 +368,7 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-    hostAliases:
+      hostAliases:
       - ip: {{ .Values.db.hostIP }}
         hostnames:
           - {{ .Release.Name | replace " " "-" }}-db.ntex.com
@@ -544,7 +544,7 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-    hostAliases:
+      hostAliases:
       - ip: {{ .Values.db.hostIP }}
         hostnames:
           - {{ .Release.Name | replace " " "-" }}-db.ntex.com
