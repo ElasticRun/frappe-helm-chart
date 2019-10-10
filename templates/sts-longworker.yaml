@@ -1,4 +1,4 @@
-{{ if eq (default true .Values.components.longworker) true }}
+{{ if .Values.components.longworker }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

@@ -1,4 +1,4 @@
-{{ if eq (default true .Values.components.web) true }}
+{{ if .Values.components.web }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

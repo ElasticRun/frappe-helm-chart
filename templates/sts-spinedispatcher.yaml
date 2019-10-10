@@ -1,4 +1,4 @@
-{{ if eq (default true .Values.components.spinedispatcher) true }}
+{{ if .Values.components.spinedispatcher }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
