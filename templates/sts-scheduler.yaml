@@ -61,7 +61,8 @@ metadata:
             timeoutSeconds: 3
             exec:
               command:
-                - "/home/frappe/docker-bench/checkjobhealth.sh scheduler:*"
+                - "/home/frappe/docker-bench/checkjobhealth.sh"
+                - "scheduler:*"
           env:
             - name: RELEASE_NAME
               value: {{ .Release.Name | quote }}

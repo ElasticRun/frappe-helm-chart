@@ -50,7 +50,8 @@ metadata:
             timeoutSeconds: 3
             exec:
               command:
-                - "/home/frappe/docker-bench/checkjobhealth.sh spine-dispatcher:*"
+                - "/home/frappe/docker-bench/checkjobhealth.sh"
+                - "spine-dispatcher:*"
           env:
             - name: RELEASE_NAME
               value: {{ .Release.Name | quote }}
