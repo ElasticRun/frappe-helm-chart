@@ -228,11 +228,6 @@ metadata:
                 configMapKeyRef:
                   key: kafka.config
                   name: {{ .Release.Name }}-server-config
-            - name: DB_HOST
-              valueFrom:
-                configMapKeyRef:
-                  key: db.host
-                  name: {{ .Release.Name }}-server-config
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
