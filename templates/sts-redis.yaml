@@ -1,4 +1,4 @@
-{{ if default true .Values.redisserver.enabled }}
+{{ if .Values.redisserver.enabled }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -87,7 +87,7 @@ metadata:
       containers:
       - name: redis-cache
         image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
-        imagePullPolicy: {{ default .Values.redisserver.image.pullPolicy "Always" }}
+        imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
         command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_queue.conf"]
         env:
         - name: POD_IP

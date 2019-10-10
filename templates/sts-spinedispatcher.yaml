@@ -1,4 +1,4 @@
-{{ if default true .Values.components.spinedispatcher }}
+{{ if .Values.components.spinedispatcher }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -11,7 +11,7 @@ metadata:
   {{- end -}}
 {{- "spec:" | nindent 0 }}
   serviceName: {{ .Release.Name | replace " " "-" }}
-  replicas: {{ default .Values.replicaSpineDispatcherCount 1 }}
+  replicas: {{ default 1 .Values.replicaSpineDispatcherCount }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}

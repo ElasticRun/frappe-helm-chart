@@ -1,4 +1,4 @@
-{{ if default true .Values.components.scheduler }}
+{{ if .Values.components.scheduler }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

@@ -138,11 +138,11 @@ data:
     export DB_HOST={{ .Release.Name | replace " " "-" }}-db.ntex.com
     # export DB_PASSWORD=${DB_PASSWORD}
     # export ADMIN_PASSWORD=${ADMIN_PASSWORD}
-    export CACHE_HOST={{ .Release.Name | replace " " "-" }}-cache-ntex-com:{{ default .Values.redisserver.cache.service.port 13000 }}
-    export QUEUE_HOST={{ .Release.Name | replace " " "-" }}-queue-ntex-com:{{ default .Values.redisserver.queue.service.port 11000 }}
-    export SOCKETIO_HOST={{ .Release.Name | replace " " "-" }}-socketio-ntex-com:{{ default .Values.redisserver.socketio.service.port 12000 }}
-    export GUNI_WORKER_CONNECTIONS={{ default .Values.web.gunicorn.connections_per_worker 200  }}
-    export GUNI_WORKERS={{ default .Values.web.gunicorn.workers 4 }}
+    export CACHE_HOST={{ .Release.Name | replace " " "-" }}-cache-ntex-com:{{ default 13000 .Values.redisserver.cache.service.port }}
+    export QUEUE_HOST={{ .Release.Name | replace " " "-" }}-queue-ntex-com:{{ default 11000 .Values.redisserver.queue.service.port }}
+    export SOCKETIO_HOST={{ .Release.Name | replace " " "-" }}-socketio-ntex-com:{{ default 12000 .Values.redisserver.socketio.service.port }}
+    export GUNI_WORKER_CONNECTIONS={{ default 200 .Values.web.gunicorn.connections_per_worker }}
+    export GUNI_WORKERS={{ default 4 .Values.web.gunicorn.workers }}
     export BENCH_LOG_FILE=/home/frappe/${BENCH_NAME}/logs/console.log
 {{ if .Values.redisserver.enabled }}
 ---
