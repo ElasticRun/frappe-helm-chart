@@ -27,11 +27,11 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      hostAliases:
-      - ip: {{ .Values.db.hostIP }}
-        hostnames:
-          - {{ .Release.Name | replace " " "-" }}-db.ntex.com
-    {{- with .Values.etchosts }}
+        hostAliases:
+        - hostnames:
+            - {{ .Release.Name | replace " " "-" }}-db.ntex.com
+          ip: {{ .Values.db.hostIP }}
+    {{- with .Values.etchosts -}}
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
       {{ "containers:" | nindent 6 }}
@@ -192,10 +192,10 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      hostAliases:
-      - ip: {{ .Values.db.hostIP }}
-        hostnames:
-          - {{ .Release.Name | replace " " "-" }}-db.ntex.com
+        hostAliases:
+        - ip: {{ .Values.db.hostIP }}
+          hostnames:
+            - {{ .Release.Name | replace " " "-" }}-db.ntex.com
     {{- with .Values.etchosts }}
       {{ toYaml . | nindent 8 -}}
     {{- end -}}
@@ -368,10 +368,10 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      hostAliases:
-      - ip: {{ .Values.db.hostIP }}
-        hostnames:
-          - {{ .Release.Name | replace " " "-" }}-db.ntex.com
+        hostAliases:
+        - ip: {{ .Values.db.hostIP }}
+          hostnames:
+            - {{ .Release.Name | replace " " "-" }}-db.ntex.com
     {{- with .Values.etchosts }}
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
@@ -544,10 +544,10 @@ metadata:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      hostAliases:
-      - ip: {{ .Values.db.hostIP }}
-        hostnames:
-          - {{ .Release.Name | replace " " "-" }}-db.ntex.com
+        hostAliases:
+        - ip: {{ .Values.db.hostIP }}
+          hostnames:
+            - {{ .Release.Name | replace " " "-" }}-db.ntex.com
     {{- with .Values.etchosts }}
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
