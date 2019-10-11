@@ -1,0 +1,179 @@
+{{ if .Values.components.scheduler }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "er-frappe.fullname" . }}-scheduler
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: 1 #hardcoded to 1 to ensure multiple schedulers should not run
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/role: "scheduler"
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: "scheduler"
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      hostAliases:
+        - ip: {{ .Values.db.hostIP }}
+          hostnames:
+            - {{ .Release.Name | replace " " "-" }}-db.ntex.com
+    {{- with .Values.etchosts }}
+      {{ toYaml . | nindent 8 -}}
+    {{- end -}}
+      {{ "containers:" | nindent 6 }}
+        - name: frappe-scheduler
+          image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
+          imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
+          args:
+             ["/bin/sh", "-c", "./entrypoint.sh scheduler:*"]
+          # ports:
+          #   - name: nginx
+          #     containerPort: 8000
+          #     protocol: TCP
+              #livenessProbe:
+              #initialDelaySeconds: 10
+              #failureThreshold: 5
+              #timeoutSeconds: 3
+              #httpGet:
+              #path: {{ .Values.image.frappeapp.livenessProbe.httpGetPath | default "/app-health" }}
+              # port: nginx
+          securityContext:
+            runAsUser: 1001
+            #allowPrivilegeEscalation: false
+          livenessProbe:
+            initialDelaySeconds: 10
+            failureThreshold: 5
+            timeoutSeconds: 3
+            exec:
+              command:
+                - "/home/frappe/docker-bench/checkjobhealth.sh"
+                - "scheduler:*"
+          env:
+            - name: RELEASE_NAME
+              value: {{ .Release.Name | quote }}
+            - name: KAFKA_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  key: kafka.config
+                  name: {{ .Release.Name }}-server-config
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: db.name
+                  name: {{ .Release.Name }}-server-config
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: db.password
+                  name: {{ .Release.Name }}-secrets
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: admin.password
+                  name: {{ .Release.Name }}-secrets
+          resources: {{ toYaml .Values.resources }}
+          {{ "stdin: true" | nindent 10 }}
+          tty: true
+          volumeMounts:
+            - mountPath: /home/frappe/docker-bench/config/env
+              name: er-frappe-bench-env
+            - mountPath: /home/frappe/docker-bench/logs
+              name: er-frappe-logs-dir
+            - mountPath: "/home/frappe/docker-bench/sites/site1.docker"
+              name: er-frappe-sites-vol
+              subPath: "site1.docker"
+            - mountPath: "/home/frappe/docker-bench/sites/currentsite.txt"
+              name: er-frappe-sites-vol
+              subPath: "currentsite.txt"
+            - mountPath: "/home/frappe/docker-bench/sites/apps.txt"
+              name: er-frappe-sites-vol
+              subPath: "apps.txt"
+            - mountPath: "/home/frappe/docker-bench/sites/common_site_config.json"
+              name: er-frappe-sites-vol
+              subPath: "common_site_config.json"
+        {{- if .Values.image.monitoring.enabled }}
+        - name: {{ .Chart.Name }}-monitor
+          image: "{{ .Values.image.monitoring.repository }}:{{ .Values.image.monitoring.tag }}"
+          imagePullPolicy: {{ .Values.image.monitoring.pullPolicy }}
+          ports:
+            - name: monitor
+              containerPort: {{ .Values.image.monitoring.port }}
+              protocol: {{ .Values.image.monitoring.protocol | default "TCP" }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+        {{- end }}
+        {{- if .Values.image.fluentd.enabled }}
+        - name: {{ .Chart.Name }}-log-collector
+          image: "{{ .Values.image.fluentd.repository }}:release"
+          imagePullPolicy: {{ .Values.image.fluentd.pullPolicy }}
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - name: log-collector
+              containerPort: {{ .Values.image.fluentd.externalPort }}
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /fluentd/etc
+              name: er-frappe-fluentd-config-vol
+            - mountPath: /fluentd/log
+              name: er-frappe-logs-dir
+          resources: {{ toYaml .Values.resources | nindent 12 -}}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      restartPolicy: Always
+      volumes:
+        - name: er-frappe-sites-vol
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-sites-pvc
+        - name: er-frappe-fluentd-config-vol
+          configMap:
+            name : {{ .Release.Name }}-fluentd-config
+            items:
+            - key : fluent.conf
+              path: fluent.conf
+        - name: er-frappe-bench-env
+          configMap:
+            name: {{ .Release.Name | replace " " "-" }}-bench-env
+          defaultMode: 0755
+        # Volume used for sharing log files between fluentd and frappe containers.
+        # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
+        - name : er-frappe-logs-dir
+          emptyDir: {}
+        {{- if .Values.migration.enabled }}
+        - name : er-frappe-migratescripts-config-vol
+          configMap:
+            name : {{ .Release.Name }}-migratescript-config
+        {{- end }}
+{{- end -}}

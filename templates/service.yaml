@@ -1,0 +1,69 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "er-frappe.fullname" . }}
+  namespace: {{ .Values.targetNamespace }}
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: nginx
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/role: "web"
+{{ if .Values.redisserver.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-cache-ntex-com
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+spec:
+  selector:
+    app: {{ .Release.Name | replace " " "-" }}-redis-cache
+  ports:
+  - protocol: TCP
+    port: {{ .Values.redisserver.cache.service.port | default 13000 }}
+    targetPort: {{ .Values.redisserver.cache.listenport }}
+  type: {{ .Values.redisserver.cache.service.type }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-queue-ntex-com
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+spec:
+  selector:
+    app: {{ .Release.Name | replace " " "-" }}-redis-queue
+  ports:
+  - protocol: TCP
+    port: {{ .Values.redisserver.queue.service.port | default 11000 }}
+    targetPort: {{ .Values.redisserver.queue.listenport }}
+  type: {{ .Values.redisserver.cache.service.type }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-socketio-ntex-com
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+spec:
+  selector:
+    app: {{ .Release.Name | replace " " "-" }}-redis-socketio
+  ports:
+  - protocol: TCP
+    port: {{ .Values.redisserver.socketio.service.port | default 12000 }}
+    targetPort: {{ .Values.redisserver.socketio.listenport }}
+  type: {{ .Values.redisserver.socketio.service.type }}
+{{ end }}

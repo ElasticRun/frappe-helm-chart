@@ -1,0 +1,317 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-server-config
+  namespace: {{ .Values.targetNamespace }}
+data:
+  gunicorn.connections.per.worker: {{ .Values.web.gunicorn.connections_per_worker | default 200 | quote }}
+  gunicorn.workers: {{ .Values.web.gunicorn.workers | default 4 | quote }}
+  # db.host: {{ .Release.Name }}-db-ntex-com
+  db.name: {{ .Values.site.dbname }}
+  kafka.config: |
+    {
+      "auto.offset.reset": "smallest",
+      "bootstrap.servers": "{{ .Values.branch }}-spine.ntex.com:10180",
+      "client.id": {{ printf "%s-%s" .Release.Name "spine-client" | quote }},
+      "default.topic.config": {
+        "acks": "all"
+      },
+      "fetch.message.max.bytes": "81920",
+      "group.id": {{ printf "%s-%s" .Release.Name "spine-client-grp" | quote }},
+      "request.required.acks": "1"
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-fluentd-config
+  namespace: {{ .Values.targetNamespace }}
+data:
+  fluent.conf: |
+    <system>
+      log_level info
+    </system>
+    <source>
+      @type tail
+      path /fluentd/log/*.log
+      exclude_path ["/fluentd/log/web_access.log"]
+      path_key filename
+      pos_file /home/frappe/td-agent/frappe-logs.pos
+      tag frappe.app.${filename}
+      <parse>
+        @type multi_format
+        <pattern>
+          format json
+          estimate_current_event true
+          time_key time_local
+        </pattern>
+        <pattern>
+          format none
+        </pattern>
+      </parse>
+    </source>
+    <source>
+      @type tail
+      path /fluentd/log/web_access.log
+      path_key filename
+      pos_file /home/frappe/td-agent/frappe-web-logs.pos
+      tag frappe.access.${filename}
+      <parse>
+        @type multi_format
+        <pattern>
+          format json
+          estimate_current_event true
+          time_key time_local
+          time_format %d/%b/%Y:%H:%M:%S %z
+        </pattern>
+        <pattern>
+          format none
+        </pattern>
+      </parse>
+    </source>
+    {{ if .Values.image.fluentd.gelfEnabled | default "true" }}
+    <source>
+      @type gelf
+      tag frappe.gelf
+      bind 127.0.0.1
+      port 12201
+    </source>
+    {{ end }}
+    <filter frappe.app.**>
+      type elasticsearch_timestamp_check
+      subsecond_precision 3
+    </filter>
+    <filter **>
+      @type record_transformer
+      <record>
+        branch {{ .Values.branch }}
+        namespace {{ .Values.targetNamespace }}
+        releasename  {{ .Release.Name }}
+        pod_ip "#{ENV['POD_IP']}"
+        pod_name "#{ENV['POD_NAME']}"
+        tag ${tag}
+      </record>
+    </filter>
+    <filter fluent.**>
+      @type elasticsearch_timestamp_check
+      subsecond_precision 3
+    </filter>
+    <match frappe.**>
+      @type elasticsearch
+      host {{ .Values.branch }}-{{ .Values.image.fluentd.elasticHost }}
+      port {{ .Values.image.fluentd.elasticPort }}
+      index_name fluentd.{{ .Values.image.fluentd.indexname | default "microk8s" }}.%Y-%m-%d
+      log_es_400_reason true
+      <buffer tag, time>
+        flush_thread_count 4
+        timekey 60 # chunks per minute
+      </buffer>
+    </match>
+    <match fluent.**>
+      @type file
+      path /var/log/fluentd.%Y-%m-%d-%H
+      compress gzip
+      append true
+      <buffer time>
+        flush_thread_count 2
+        timekey 3600 # chunks per hour
+      </buffer>
+    </match>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-bench-env
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+data:
+  bench.env: |
+    export BENCH_NAME=docker-bench
+    export BENCH_HOME=/home/frappe/${BENCH_NAME}
+    {{- if .Values.targetNamespace }}
+    export NAMESPACE={{ .Values.targetNamespace }}
+    {{- end }}
+    export SITE=site1.docker
+    # This value must match hostAliases added in deployment.yaml for all statefulsets
+    export DB_HOST={{ .Release.Name | replace " " "-" }}-db.ntex.com
+    # export DB_PASSWORD=${DB_PASSWORD}
+    # export ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    export CACHE_HOST={{ .Release.Name | replace " " "-" }}-cache-ntex-com:{{ default 13000 .Values.redisserver.cache.service.port }}
+    export QUEUE_HOST={{ .Release.Name | replace " " "-" }}-queue-ntex-com:{{ default 11000 .Values.redisserver.queue.service.port }}
+    export SOCKETIO_HOST={{ .Release.Name | replace " " "-" }}-socketio-ntex-com:{{ default 12000 .Values.redisserver.socketio.service.port }}
+    export GUNI_WORKER_CONNECTIONS={{ default 200 .Values.web.gunicorn.connections_per_worker }}
+    export GUNI_WORKERS={{ default 4 .Values.web.gunicorn.workers }}
+    export BENCH_LOG_FILE=/home/frappe/${BENCH_NAME}/logs/console.log
+{{ if .Values.redisserver.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-redis-config
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+data:
+  update-node.sh: |
+    #!/bin/sh
+    REDIS_NODES="/data/nodes.conf"
+    sed -i -e "/myself/ s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/${POD_IP}/" ${REDIS_NODES}
+    exec "$@"
+
+  redis_cache.conf: |
+    dbfilename redis_cache.rdb
+    bind 0.0.0.0
+    port {{ .Values.redisserver.cache.listenport }}
+
+    maxmemory {{ .Values.redisserver.cache.maxmemory | default "256mb" }}
+    maxmemory-policy allkeys-lru
+    save ""
+
+    {{- if .Values.redisserver.cache.clusterEnabled -}}
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-node-timeout 15000
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    appendonly yes
+    protected-mode no
+    {{ else }}
+    appendonly no
+    {{- end }}
+
+  redis_queue.conf: |
+    dbfilename redis_queue.rdb
+    bind 0.0.0.0
+    port {{ .Values.redisserver.queue.listenport }}
+
+    {{- if .Values.redisserver.queue.clusterEnabled -}}
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-node-timeout 15000
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    appendonly yes
+    protected-mode no
+    {{- end }}
+
+  redis_socketio.conf: |
+    dbfilename redis_socketio.rdb
+    bind 0.0.0.0
+    port {{ .Values.redisserver.socketio.listenport }}
+
+    {{- if .Values.redisserver.socketio.clusterEnabled -}}
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-node-timeout 15000
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    appendonly yes
+    protected-mode no
+    {{- end }}
+{{ end }}
+{{- if .Values.migration.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-migratescript-config
+  namespace: {{ .Values.targetNamespace }}
+data:
+  migrate_wrapper.sh: |-
+    echo "Trying to execute following migration scripts..."
+    echo $@
+    echo > /tmp/initscript.out
+    for script in $@
+    do
+        /bin/bash -c $script 2>&1 >> /tmp/initscript.out
+        if [ $? -ne 0 ]
+        then
+        echo "$script exited with error."
+        python3 sendmail.py
+        fi
+    done
+    true
+  sendmail.py: |-
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    import smtplib
+    import json
+    import traceback
+    from email.mime.base import MIMEBase
+
+    def mail_report():
+        # try:
+        with  open('./sendmail.conf','rb') as configFile:
+            conf = json.load(configFile)
+
+        sender = conf['mailSender']
+        auth_user = conf['mailAuthUser']
+        auth_pass = conf['mailAuthPass']
+        server = conf['mailServer']
+        port = conf['mailServerPort']
+        receiver = conf['mailReceiver']
+
+        text = """
+        hello,
+
+        There was an error while trying to initialize deployment of a frappe application.
+        Details of error -
+
+        {stderror}
+
+        Regards,
+        Elastic Run - Technology Team"""
+
+        html = """
+        <html><body><p>Hello,</p>
+
+        <p><b>There was an error while trying to initialize deployment of a frappe application.</b></p><br>
+        <p>Details of error:<br></p>
+        <pre>
+        {stderror}
+        </pre>
+        <p>Regards,<br>
+        Elastic Run - Technology Team</p>
+        </body></html>
+        """
+        scriptOutput = ""
+        with  open('/tmp/initscript.out','rb') as scriptOutputFile:
+            for line in scriptOutputFile:
+                scriptOutput = scriptOutput + line.decode("utf-8")
+
+        text = text.format(stderror=scriptOutput)
+        html = html.format(stderror=scriptOutput)
+
+        message = MIMEMultipart(
+            "alternative", None, [MIMEText(text), MIMEText(html,'html')])
+
+        message['Subject'] = "Init Container Failed"
+        message['From'] = sender
+        message['To'] = ", ".join(receiver)
+
+        server = smtplib.SMTP(server+':'+port)
+        server.ehlo()
+        server.starttls()
+        server.login(auth_user, auth_pass)
+
+        server.sendmail(sender, receiver, message.as_string())
+        server.quit()
+
+    if __name__== "__main__" :
+        try:
+            mail_report()
+        except:
+            traceback.print_exc()
+            print("error while sending mail")
+  sendmail.conf: |-
+    '{
+      "mailAuthUser":"tech@elastic.run",
+      "mailAuthPass":"PCavs401",
+      "mailServer":"smtp-relay.gmail.com",
+      "mailServerPort":"587",
+      "mailSender":"tech.support@elastic.run",
+      "mailReceiver":["ajit.pendse@elastic.run", "nikhil.sharma@elastic.run"]
+      }'
+{{ end }}

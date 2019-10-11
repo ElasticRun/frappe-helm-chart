@@ -1,0 +1,150 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-sites-pvc
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: {{ if or (eq .Values.persistence.type "azure") (eq .Values.persistence.type "gke") }}{{ .Release.Name }}-sites-sc{{ else if eq .Values.persistence.type "local" }}{{ .Release.Name }}-sites-sc{{ else }}default{{ end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.capacityInGi }}Gi
+{{ if eq .Values.persistence.type "azure" }}
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .Release.Name }}-sites-sc
+  namespace: {{ .Values.targetNamespace }}
+# Values below are specific to azure - will need to be updated for migrating to any other cloud platform.
+provisioner: kubernetes.io/azure-{{ .Values.persistence.subtype }}
+parameters:
+  skuName: Standard_LRS
+  location: {{ .Values.persistence.location }}
+  storageAccount: {{ .Values.persistence.storageaccount }}
+reclaimPolicy: Retain
+mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - mfsymlinks
+allowVolumeExpansion: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-aks-share-secret
+  namespace: {{ .Values.targetNamespace }}
+type: Opaque
+data:
+  azurestorageaccountname: {{ .Values.persistence.storageaccount | b64enc }}
+  azurestorageaccountkey: {{ .Values.persistence.storageaccountkey }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-sites-pv
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  capacity:
+    storage: {{ .Values.persistence.capacityInGi }}Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Release.Name }}-sites-sc
+  azureFile:
+    secretName: {{ .Release.Name }}-aks-share-secret
+    secretNamespace: {{ .Values.targetNamespace }}
+    shareName: {{ .Values.persistence.sharename }}
+    readOnly: false
+  mountOptions:
+    - dir_mode=0777
+    - file_mode=0777
+    - mfsymlinks
+{{ else if eq .Values.persistence.type "local" }}
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .Release.Name }}-sites-sc
+# labels:
+#     addonmanager.kubernetes.io/mode: EnsureExists
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+# mountOptions:
+#   - dir_mode=0777
+#   - file_mode=0777
+#   - uid=frappe
+#   - gid=frappe
+# Values below are specific to provider
+provisioner: microk8s.io/hostpath
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-sites-pv
+spec:
+  capacity:
+    storage: {{ .Values.persistence.capacityInGi }}Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Release.Name }}-sites-sc
+  hostPath:
+    path: /data/frappe/Software/k8s-volumes/frappe-vol/
+  # mountOptions:
+  #   - dir_mode=0777
+  #   - file_mode=0777
+  #   - uid=frappe
+  #   - gid=frappe
+{{ else if eq .Values.persistence.type "gke" }}
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .Release.Name }}-sites-sc
+  namespace: {{ .Values.targetNamespace }}
+# Values below are specific to azure - will need to be updated for migrating to any other cloud platform.
+{{ if eq .Values.persistence.subtype "gce-pd" }}
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: {{ .Values.persistence.pdType }}
+  replication-type: {{ .Values.persistence.replicationType }}
+{{ else if eq .Values.persistence.subtype "nfs" }}
+provisioner: cluster.local/nfs-client-nfs-client-provisioner
+parameters:
+  # type: pd-standard
+  # replication-type: none
+  archiveOnDelete: "false"
+{{- end }}
+reclaimPolicy: Retain
+# mountOptions:
+#   - dir_mode=0777
+#   - file_mode=0777
+#   - mfsymlinks
+allowVolumeExpansion: true
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-sites-pv
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  capacity:
+    storage: {{ .Values.persistence.capacityInGi }}Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Release.Name }}-sites-sc
+  {{ if eq .Values.persistence.subtype "gce-pd" }}
+  gcePersistentDisk:
+    pdName: {{ .Values.persistence.pdName }}
+    readOnly: false
+  {{ else if eq .Values.persistence.subtype "nfs" }}
+  nfs:
+    server: {{ .Values.persistence.nfsServer }}
+    path: {{ printf "%s/%s" .Values.persistence.nfsBasePath .Release.Name }}
+  mountOptions:
+    - hard
+  {{- end }}
+  #   - file_mode=0777
+  #   - mfsymlinks
+{{ end }}
