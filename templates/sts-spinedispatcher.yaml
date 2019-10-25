@@ -11,7 +11,7 @@ metadata:
   {{- end -}}
 {{- "spec:" | nindent 0 }}
   serviceName: {{ .Release.Name | replace " " "-" }}
-  replicas: {{ default 1 .Values.replicaSpineDispatcherCount }}
+  replicas: {{ default 1 .Values.replicas.spinedispatcher }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}
@@ -75,7 +75,8 @@ metadata:
                 secretKeyRef:
                   key: admin.password
                   name: {{ .Release.Name }}-secrets
-          resources: {{ toYaml .Values.resources }}
+          resources:
+            {{- toYaml .Values.resources.spinedispatcher | nindent 12 -}}
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:
@@ -103,7 +104,8 @@ metadata:
             - name: monitor
               containerPort: {{ .Values.image.monitoring.port }}
               protocol: {{ .Values.image.monitoring.protocol | default "TCP" }}
-          resources: {{- toYaml .Values.resources | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources.monitor | nindent 12 }}
         {{- end }}
         {{- if .Values.image.fluentd.enabled }}
         - name: {{ .Chart.Name }}-log-collector
@@ -127,7 +129,8 @@ metadata:
               name: er-frappe-fluentd-config-vol
             - mountPath: /fluentd/log
               name: er-frappe-logs-dir
-          resources: {{ toYaml .Values.resources | nindent 12 -}}
+          resources:
+            {{- toYaml .Values.resources.logcollector | nindent 12 }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -160,9 +163,4 @@ metadata:
         # Usage of emptyDir make it volatile and logs from evicted pods will be lost, if not published.
         - name : er-frappe-logs-dir
           emptyDir: {}
-        {{- if .Values.migration.enabled }}
-        - name : er-frappe-migratescripts-config-vol
-          configMap:
-            name : {{ .Release.Name }}-migratescript-config
-        {{- end }}
 {{- end -}}

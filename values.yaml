@@ -3,8 +3,12 @@
 # Declare variables to be passed into your templates.
 
 # Number of PODs to be started
-replicaCount: 1
-targetNamespace: frappe-base
+replicas:
+  defaultworker: 1
+  longworker: 1
+  spinedispatcher: 1
+  web: 1
+targetNamespace: frappe11
 
 # Target Environment - can be only beta-release or release
 branch: release
@@ -18,6 +22,7 @@ components:
   scheduler: true
   longworker: true
   spinedispatcher: true
+  defaultworker: true
 
 # Allows for applications to define migration strategy deployed as initContainers
 # The commands array is mandatory if this is enabled.
@@ -47,9 +52,9 @@ persistence:
   #storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
   #location: sea
   # Type & replication for persistent disk used in GKE - used only for type: gke, subtype: gce-pd
-  #pdType: pd-standard
-  #replicationType: none
-  #pdName: er-bk8s-trun-site-pd
+  pdType: pd-standard
+  replicationType: none
+  pdName: er-bk8s-trun-site-pd
   # NFS Server Details along with path which should be used to hold site data - used only for type: gke, subtype: nfs
   nfsServer: "10.68.0.2"
   # Base path where the files will be saved. Release name directory is expected to exist in this path.
@@ -164,8 +169,6 @@ web:
     connections_per_worker: 200
     workers: 4
 
-spine:
-
 ## Optional /etc/hosts contents
 etchosts:
   - ip: 10.60.0.4
@@ -174,11 +177,11 @@ etchosts:
   - ip: 10.210.2.21
     hostnames:
       - release-spine.ntex.com
-  - ip: 10.75.0.97
+  - ip: 10.160.0.23
     hostnames:
       - beta-release-db.ntex.com
       - release-db.ntex.com
-  - ip: 10.76.0.66
+  - ip: 10.70.0.8
     hostnames:
       - beta-release-elasticsearch.ntex.com
       - release-elasticsearch.ntex.com
@@ -195,7 +198,8 @@ site:
 
 ingress:
   enabled: false
-  annotations: {}
+  annotations:
+    {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
@@ -207,11 +211,81 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+# We usually recommend not to specify default resources and to leave this as a conscious
+# choice for the user. This also increases chances charts run on environments with little
+# resources, such as Minikube. If you do want to specify resources, uncomment the following
+# lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+resources: #{}
+  web: #{}
+    limits:
+      cpu: 750m
+      memory: 1024Mi
+    requests:
+      cpu: 150m
+      memory: 128Mi
+  defaultworker: #{}
+    limits:
+      cpu: 750m
+      memory: 1024Mi
+    requests:
+      cpu: 150m
+      memory: 128Mi
+  longworker: #{}
+    limits:
+      cpu: 250m
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  scheduler: #{}
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  spinedispatcher: #{}
+    limits:
+      cpu: 500m
+      memory: 1024Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  logcollector: #{}
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+  monitor: #{}
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+  cache: #{}
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+  queue: #{}
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+  socketio: #{}
+    limits:
+      cpu: 50m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
   # limits:
   #   cpu: 100m
   #   memory: 128Mi

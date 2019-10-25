@@ -1,9 +1,9 @@
-{{ if .Values.components.longworker }}
+{{ if .Values.components.defaultworker }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "er-frappe.fullname" . }}-long-worker
+  name: {{ include "er-frappe.fullname" . }}-default-worker
   labels:
 {{ include "er-frappe.labels" . | indent 4 }}
   {{- if .Values.targetNamespace }}
@@ -11,18 +11,18 @@ metadata:
   {{- end -}}
 {{- "spec:" | nindent 0 }}
   serviceName: {{ .Release.Name | replace " " "-" }}
-  replicas: {{ .Values.replicas.longworker | default 1 }}
+  replicas: {{ .Values.replicas.defaultworker | default 1 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "er-frappe.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
-      app.kubernetes.io/role: "long-worker"
+      app.kubernetes.io/role: "default-worker"
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "er-frappe.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/role: "long-worker"
+        app.kubernetes.io/role: "default-worker"
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -36,11 +36,11 @@ metadata:
         {{- toYaml . | nindent 8 -}}
     {{- end -}}
       {{ "containers:" | nindent 6 }}
-        - name: frappe-long-worker
+        - name: frappe-default-worker
           image: {{ .Values.image.frappeapp.repository }}:{{ .Values.branch }}
           imagePullPolicy: {{ .Values.image.frappeapp.pullPolicy | default "Always" }}
           args:
-             ["/bin/sh", "-c", "./entrypoint.sh long-worker:*"]
+             ["/bin/sh", "-c", "./entrypoint.sh default-workers:*"]
           # ports:
           #   - name: nginx
           #     containerPort: 8000
@@ -62,7 +62,7 @@ metadata:
             exec:
               command:
                 - "/home/frappe/docker-bench/checkjobhealth.sh"
-                - "long-worker:*"
+                - "default-workers:*"
           env:
             - name: RELEASE_NAME
               value: {{ .Release.Name | quote }}
@@ -87,7 +87,7 @@ metadata:
                   key: admin.password
                   name: {{ .Release.Name }}-secrets
           resources:
-            {{- toYaml .Values.resources.longworker | nindent 12 -}}
+            {{- toYaml .Values.resources.defaultworker | nindent 12 -}}
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:

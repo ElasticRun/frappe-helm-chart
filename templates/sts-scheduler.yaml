@@ -86,7 +86,8 @@ metadata:
                 secretKeyRef:
                   key: admin.password
                   name: {{ .Release.Name }}-secrets
-          resources: {{ toYaml .Values.resources }}
+          resources:
+            {{- toYaml .Values.resources.scheduler | nindent 12 -}}
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:
@@ -114,7 +115,8 @@ metadata:
             - name: monitor
               containerPort: {{ .Values.image.monitoring.port }}
               protocol: {{ .Values.image.monitoring.protocol | default "TCP" }}
-          resources: {{- toYaml .Values.resources | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources.monitor | nindent 12 }}
         {{- end }}
         {{- if .Values.image.fluentd.enabled }}
         - name: {{ .Chart.Name }}-log-collector
@@ -138,7 +140,8 @@ metadata:
               name: er-frappe-fluentd-config-vol
             - mountPath: /fluentd/log
               name: er-frappe-logs-dir
-          resources: {{ toYaml .Values.resources | nindent 12 -}}
+          resources:
+            {{- toYaml .Values.resources.logcollector | nindent 12 }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
