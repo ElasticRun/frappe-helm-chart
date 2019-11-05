@@ -20,4 +20,4 @@ er-frappe-chart-deploy:
     - beta-release
     - release
   tags:
-    - engg-k8s
+    - gcp-bk8s-app-common
