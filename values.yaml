@@ -166,8 +166,8 @@ db:
 
 web:
   gunicorn:
-    connections_per_worker: 200
-    workers: 4
+    connections_per_worker: 25
+    workers: 2
 
 ## Optional /etc/hosts contents
 etchosts:
