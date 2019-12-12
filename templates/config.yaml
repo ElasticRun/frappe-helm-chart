@@ -106,6 +106,7 @@ data:
       <buffer tag, time>
         flush_thread_count 4
         timekey 60 # chunks per minute
+        timekey_wait 10 # Time to wait before sending out logs to elasticsearch
       </buffer>
     </match>
     <match fluent.**>
@@ -116,6 +117,7 @@ data:
       <buffer time>
         flush_thread_count 2
         timekey 3600 # chunks per hour
+        timekey_wait 10 # Time to wait before sending out logs to elasticsearch
       </buffer>
     </match>
 ---
