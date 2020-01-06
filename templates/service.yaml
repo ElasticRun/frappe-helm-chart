@@ -8,6 +8,10 @@ metadata:
 {{ include "er-frappe.labels" . | indent 4 }}
 spec:
   type: {{ .Values.service.type }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
+{{- if eq .Values.service.type "LoadBalancer" }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+{{- end }}
   ports:
     - port: {{ .Values.service.port }}
       targetPort: nginx
