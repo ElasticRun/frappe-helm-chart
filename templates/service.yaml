@@ -23,7 +23,7 @@ spec:
     app.kubernetes.io/name: {{ include "er-frappe.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/role: "web"
-{{ if .Values.socketio.enabled }}
+{{ if .Values.components.socketio }}
 ---
 apiVersion: v1
 kind: Service
@@ -49,6 +49,7 @@ spec:
     app.kubernetes.io/name: {{ include "er-frappe.name" . }}-socketio
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/role: "socketio"
+{{ end }}
 {{ if .Values.redisserver.enabled }}
 ---
 apiVersion: v1
