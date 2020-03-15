@@ -23,6 +23,32 @@ spec:
     app.kubernetes.io/name: {{ include "er-frappe.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/role: "web"
+{{ if .Values.socketio.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "er-frappe.fullname" . }}-socketio
+  namespace: {{ .Values.targetNamespace }}
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+{{- if or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort") }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
+{{- end }}
+{{- if eq .Values.service.type "LoadBalancer" }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+{{- end }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: nginx
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "er-frappe.name" . }}-socketio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/role: "socketio"
 {{ if .Values.redisserver.enabled }}
 ---
 apiVersion: v1
