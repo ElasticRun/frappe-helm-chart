@@ -1,6 +1,5 @@
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "er-frappe.fullname" . -}}
-{{- $fullNameSocketio := include "er-frappe.fullname" . -}}-socketio
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -35,10 +34,10 @@ spec:
               serviceName: {{ $fullName }}
               servicePort: http
         {{- end }}
-        {{ if .Values.components.socketio }}
+        {{ if $.Values.components.socketio }}
           - path: /socketio
             backend:
-              serviceName: {{ $fullNameSocketio }}
+              serviceName: {{ $fullName }}-socketio
               servicePort: http
         {{ end }}
     - host: {{ $.Release.Name }}-dr.{{ .host }}
@@ -50,10 +49,10 @@ spec:
               serviceName: {{ $fullName }}
               servicePort: http
         {{- end }}
-        {{ if .Values.components.socketio }}
+        {{ if $.Values.components.socketio }}
           - path: /socketio
             backend:
-              serviceName: {{ $fullNameSocketio }}
+              serviceName: {{ $fullName }}-socketio
               servicePort: http
         {{ end }}
     {{- end }}
