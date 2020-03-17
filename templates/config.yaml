@@ -183,6 +183,27 @@ data:
     appendonly no
     {{- end }}
 
+  redis_bigcache.conf: |
+    dbfilename redis_bigcache.rdb
+    bind 0.0.0.0
+    port {{ .Values.redisserver.bigcache.listenport }}
+
+    maxmemory {{ .Values.redisserver.bigcache.maxmemory | default "2048mb" }}
+    maxmemory-policy allkeys-lru
+    save ""
+
+    {{- if .Values.redisserver.bigcache.clusterEnabled -}}
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-node-timeout 15000
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    appendonly yes
+    protected-mode no
+    {{ else }}
+    appendonly no
+    {{- end }}
+
   redis_queue.conf: |
     dbfilename redis_queue.rdb
     bind 0.0.0.0

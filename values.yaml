@@ -8,6 +8,9 @@ replicas:
   longworker: 1
   spinedispatcher: 1
   web: 1
+  frappesocketio: 1
+  #kafka: 0
+
 targetNamespace: frappe11
 
 # Target Environment - can be only beta-release or release
@@ -23,6 +26,35 @@ components:
   longworker: true
   spinedispatcher: true
   defaultworker: true
+  frappesocketio: true
+  #kafka: false
+
+hpa:
+  web:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
+  longworker:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
+  defaultworker:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
+  spinedispatcher:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
+  frappesocketio:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
 
 # Allows for applications to define migration strategy deployed as initContainers
 # The commands array is mandatory if this is enabled.
@@ -67,6 +99,19 @@ redisserver:
     repository: redis
     tag: alpine
     pullPolicy: IfNotPresent
+  bigcache:
+    enabled: true
+    clusterEnabled: false
+    #Will be used only if cluster is enabled.
+    replicaCount: 6
+    service:
+      type: ClusterIP
+      port: 13100
+    listenport: 6379
+    maxmemory: 2048mb
+    persistence:
+      enabled: false
+      storageCapacityinGi: 2
   cache:
     clusterEnabled: false
     #Will be used only if cluster is enabled.
@@ -263,6 +308,13 @@ resources: #{}
     requests:
       cpu: 100m
       memory: 128Mi
+  frappesocketio: #{}
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
   logcollector: #{}
     limits:
       cpu: 100m
@@ -278,12 +330,23 @@ resources: #{}
       cpu: 25m
       memory: 32Mi
   cache: #{}
+    # memory limits for cache should be enough to accomodate
+    # maxmemory configuration in redisserver above.
     limits:
       cpu: 100m
       memory: 128Mi
     requests:
       cpu: 25m
       memory: 32Mi
+  bigcache:
+    # memory limits for cache should be enough to accomodate
+    # maxmemory configuration in redisserver above.
+    limits:
+      cpu: 250m
+      memory: 2Gi
+    requests:
+      cpu: 50m
+      memory: 256Mi
   queue: #{}
     limits:
       cpu: 100m
