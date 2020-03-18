@@ -147,4 +147,106 @@ spec:
   {{- end }}
   #   - file_mode=0777
   #   - mfsymlinks
+{{ if .Values.components.kafka }}
+{{ if .Values.kafka.zookeeper.persistence.enabled }}
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .Release.Name }}-zk-sc
+  namespace: {{ .Values.targetNamespace }}
+# Values below are specific to azure - will need to be updated for migrating to any other cloud platform.
+{{ if eq .Values.kafka.zookeeper.persistence.subtype "gce-pd" }}
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: {{ .Values.kafka.zookeeper.persistence.pdType }}
+  replication-type: {{ .Values.kafka.zookeeper.persistence.replicationType }}
+{{ else if eq .Values.kafka.zookeeper.persistence.subtype "nfs" }}
+provisioner: cluster.local/nfs-client-nfs-client-provisioner
+parameters:
+  # type: pd-standard
+  # replication-type: none
+  archiveOnDelete: "false"
+{{- end }}
+reclaimPolicy: Retain
+# mountOptions:
+#   - dir_mode=0777
+#   - file_mode=0777
+#   - mfsymlinks
+allowVolumeExpansion: true
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-zk-pv
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  capacity:
+    storage: {{ .Values.kafka.zookeeper.persistence.capacityInGi }}Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Release.Name }}-zk-sc
+  {{ if eq .Values.kafka.zookeeper.persistence.subtype "gce-pd" }}
+  gcePersistentDisk:
+    pdName: {{ .Release.Name }}-{{ .Values.kafka.zookeeper.persistence.pdName }}
+    readOnly: false
+  {{ else if eq .Values.kafka.zookeeper.persistence.subtype "nfs" }}
+  nfs:
+    server: {{ .Values.persistence.nfsServer }}
+    path: {{ printf "%s/%s/%s" .Values.persistence.nfsBasePath .Release.Name "zookeeper" }}
+  mountOptions:
+    - hard
+  {{- end }}
+{{ end }}
+{{ if .Values.kafka.persistence.enabled }}
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .Release.Name }}-kafka-sc
+  namespace: {{ .Values.targetNamespace }}
+# Values below are specific to azure - will need to be updated for migrating to any other cloud platform.
+{{ if eq .Values.kafka.persistence.subtype "gce-pd" }}
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: {{ .Values.kafka.persistence.pdType }}
+  replication-type: {{ .Values.kafka.persistence.replicationType }}
+{{ else if eq .Values.kafka.persistence.subtype "nfs" }}
+provisioner: cluster.local/nfs-client-nfs-client-provisioner
+parameters:
+  # type: pd-standard
+  # replication-type: none
+  archiveOnDelete: "false"
+{{- end }}
+reclaimPolicy: Retain
+# mountOptions:
+#   - dir_mode=0777
+#   - file_mode=0777
+#   - mfsymlinks
+allowVolumeExpansion: true
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-zk-pv
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  capacity:
+    storage: {{ .Values.kafka.persistence.capacityInGi }}Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Release.Name }}-kafka-sc
+  {{ if eq .Values.kafka.persistence.subtype "gce-pd" }}
+  gcePersistentDisk:
+    pdName: {{ .Release.Name }}-{{ .Values.kafka.persistence.pdName }}
+    readOnly: false
+  {{ else if eq .Values.kafka.persistence.subtype "nfs" }}
+  nfs:
+    server: {{ .Values.persistence.nfsServer }}
+    path: {{ printf "%s/%s/%s" .Values.persistence.nfsBasePath .Release.Name "kafka" }}
+  mountOptions:
+    - hard
+  {{- end }}
+{{ end }}
+{{ end }}
 {{ end }}

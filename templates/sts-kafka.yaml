@@ -1,0 +1,356 @@
+{{ if .Values.components.kafka }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-zookeeper
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+spec:
+  serviceName: {{ .Release.Name }}-zookeeper-headless
+  replicas: 1
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/role: "zookeeper"
+  template:
+    metadata:
+      name: {{ .Release.Name }}-zookeeper
+      labels:
+        app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: "zookeeper"
+    spec:
+      securityContext:
+        fsGroup: 1001
+      initContainers:
+        - name: volume-permissions
+          image: docker.io/bitnami/minideb:buster
+          imagePullPolicy: "Always"
+          command: ["chown", "-R", "1001:1001", "/bitnami/zookeeper"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/zookeeper
+      containers:
+        - name: {{ .Release.Name }}-zookeeper
+          image: docker.io/bitnami/zookeeper:3.5.7
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            runAsUser: 1001
+          command:
+            - bash
+            - -ec
+            - |
+                # Execute entrypoint as usual after obtaining ZOO_SERVER_ID based on POD hostname
+                HOSTNAME=`hostname -s`
+                if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
+                  ORD=${BASH_REMATCH[2]}
+                  export ZOO_SERVER_ID=$((ORD+1))
+                else
+                  echo "Failed to get index from hostname $HOST"
+                  exit 1
+                fi
+                exec /entrypoint.sh /run.sh
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          env:
+            - name: ZOO_PORT_NUMBER
+              value: "2181"
+            - name: ZOO_TICK_TIME
+              value: "2000"
+            - name: ZOO_INIT_LIMIT
+              value: "10"
+            - name: ZOO_SYNC_LIMIT
+              value: "5"
+            - name: ZOO_MAX_CLIENT_CNXNS
+              value: "60"
+            - name: ZOO_4LW_COMMANDS_WHITELIST
+              value: "srvr, mntr"
+            - name: ZOO_LISTEN_ALLIPS_ENABLED
+              value: "yes"
+            - name: ZOO_SERVERS
+              value: {{ .Release.Name }}-zookeeper-0.{{ .Release.Name }}-zookeeper-headless.{{ .Values.targetNamespace }}.svc.cluster.local:2888:3888 
+            - name: ZOO_ENABLE_AUTH
+              value: "no"
+            - name: ZOO_HEAP_SIZE
+              value: "1024"
+            - name: ZOO_LOG_LEVEL
+              value: "INFO"
+            - name: ALLOW_ANONYMOUS_LOGIN
+              value: "yes"
+          ports:
+            - name: client
+              containerPort: 2181
+            - name: follower
+              containerPort: 2888
+            - name: election
+              containerPort: 3888
+          livenessProbe:
+            tcpSocket:
+              port: client
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+          readinessProbe:
+            tcpSocket:
+              port: client
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/zookeeper
+  {{ if .Values.kafka.zookeeper.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        annotations:
+          {{ toYaml .Values.kafka.zookeeper.persistence.annotations }}
+      spec:
+        accessModes:
+          {{ toYaml .Values.kafka.zookeeper.persistence.accessModes }}
+        resources:
+          requests:
+            storage: "{{ .Values.kafka.zookeeper.persistence.capacityInGi }}Gi"
+        storageClassName: {{ .Release.Name }}-zk-sc
+  {{ else }}
+        volumes:
+          - name: data
+            emptyDir: {}
+  {{ end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-kafka
+  labels:
+    {{ include "er-frappe.labels" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/role: "kafka"
+  serviceName: {{ .Release.Name }}-kafka-headless
+  podManagementPolicy: "Parallel"
+  replicas: 1
+  updateStrategy:
+    type: "RollingUpdate"
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: "kafka"
+    spec:      
+      securityContext:
+        fsGroup: 1001
+        runAsUser: 1001
+      nodeSelector:
+        {}
+      tolerations:
+        []
+      affinity:
+        {}
+      initContainers:
+        - name: volume-permissions
+          image: docker.io/bitnami/minideb:buster
+          imagePullPolicy: "Always"
+          command: ["chown", "-R", "1001:1001", "/bitnami/kafka"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: "/bitnami/kafka"
+      containers:
+        - name: {{ .Release.Name }}-kafka
+          image: docker.io/bitnami/kafka:2.4.0-debian-10-r21
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - /scripts/setup.sh
+          env:
+            - name: BITNAMI_DEBUG
+              value: "true"
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: KAFKA_CFG_ZOOKEEPER_CONNECT
+              value: {{ .Release.Name }}-zookeeper
+            - name: KAFKA_PORT_NUMBER
+              value: "9092"
+            - name: JMX_PORT
+              value: "5555"
+            - name: KAFKA_OPTS
+              value: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+            - name: KAFKA_BROKER_USER
+              value: "erkafkauser"
+            - name: KAFKA_BROKER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-kafka-secret
+                  key: kafka-broker-password
+            - name: KAFKA_INTER_BROKER_USER
+              value: "admin"
+            - name: KAFKA_INTER_BROKER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-kafka-secret
+                  key: kafka-inter-broker-password
+            - name: KAFKA_CERTIFICATE_PASSWORD
+              value: "changeit"
+            - name: ALLOW_PLAINTEXT_LISTENER
+              value: "yes"
+            - name: KAFKA_CFG_BROKER_ID
+              value: "-1"
+            - name: KAFKA_CFG_DELETE_TOPIC_ENABLE
+              value: "true"
+            - name: KAFKA_HEAP_OPTS
+              value: {{ .Values.kafka.heapOpts }}
+            - name: KAFKA_CFG_LOG_FLUSH_INTERVAL_MESSAGES
+              value: "10000"
+            - name: KAFKA_CFG_LOG_FLUSH_INTERVAL_MS
+              value: "1000"
+            - name: KAFKA_CFG_LOG_RETENTION_BYTES
+              value: "1073741824"
+            - name: KAFKA_CFG_LOG_RETENTION_CHECK_INTERVALS_MS
+              value: "300000"
+            - name: KAFKA_CFG_LOG_RETENTION_HOURS
+              value: "168"
+            - name: KAFKA_CFG_MESSAGE_MAX_BYTES
+              value: "1000012"
+            - name: KAFKA_CFG_LOG_SEGMENT_BYTES
+              value: "1073741824"
+            - name: KAFKA_CFG_LOG_DIRS
+              value: /bitnami/kafka/data
+            - name: KAFKA_CFG_DEFAULT_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_CFG_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
+              value: "https"
+            - name: KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_CFG_NUM_IO_THREADS
+              value: "8"
+            - name: KAFKA_CFG_NUM_NETWORK_THREADS
+              value: "3"
+            - name: KAFKA_CFG_NUM_PARTITIONS
+              value: "1"
+            - name: KAFKA_CFG_NUM_RECOVERY_THREADS_PER_DATA_DIR
+              value: "2"
+            - name: KAFKA_CFG_SOCKET_RECEIVE_BUFFER_BYTES
+              value: "102400"
+            - name: KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES
+              value: "104857600"
+            - name: KAFKA_CFG_SOCKET_SEND_BUFFER_BYTES
+              value: "102400"
+            - name: KAFKA_CFG_ZOOKEEPER_CONNECTION_TIMEOUT_MS
+              value: "6000"
+            - name: KAFKA_OPTS
+              value: "{{ .Values.kafka.options }}"
+          ports:
+            - name: kafka
+              containerPort: 9092
+          livenessProbe:
+            tcpSocket:
+              port: kafka
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 2
+          readinessProbe:
+            tcpSocket:
+              port: kafka
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts/setup.sh
+              subPath: setup.sh
+            - name: data
+              mountPath: /bitnami/kafka
+            - name: kafka-certificates
+              mountPath: /opt/bitnami/kafka/conf/certs/
+              readOnly: true
+            - name: kafka-jaas-conf
+              mountPath: /opt/bitnami/kafka/conf/kafka_jaas.conf
+              subPath: kafka_jaas.conf
+              readOnly: true
+        - name: jmx-exporter
+          image: "docker.io/bitnami/jmx-exporter:0.12.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - java
+            - -XX:+UnlockExperimentalVMOptions
+            - -XX:+UseCGroupMemoryLimitForHeap
+            - -XX:MaxRAMFraction=1
+            - -XshowSettings:vm
+            - -jar
+            - jmx_prometheus_httpserver.jar
+            - "5556"
+            - /etc/jmx-kafka/jmx-kafka-prometheus.yml
+          ports:
+            - name: metrics
+              containerPort: 5556
+          resources: 
+            limits: {}
+            requests: {}
+          volumeMounts:
+            - name: jmx-config
+              mountPath: /etc/jmx-kafka
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ .Release.Name }}-kafka-scripts
+            defaultMode: 0755
+        - name: jmx-config
+          configMap:
+            name: {{ .Release.Name }}-kafka-jmx-configuration
+        - name: kafka-certificates
+          secret:
+            secretName: {{ .Release.Name }}-kafka-jks-cert
+            defaultMode: 256
+        - name: kafka-jaas-conf
+          configMap:
+            name: {{ .Release.Name }}-kafka-jaas-conf
+  {{ if .Values.kafka.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        annotations:
+          {{ toYaml .Values.kafka.persistence.annotations }}
+      spec:
+        accessModes:
+          {{ toYaml .Values.kafka.persistence.accessModes }}
+        resources:
+          requests:
+            storage: "{{ .Values.kafka.persistence.capacityInGi }}Gi"
+        storageClassName: {{ .Values.kafka.persistence.storageClassName }}
+  {{ else }}
+        - name: data
+          emptyDir: {}
+  {{ end }}
+{{ end }}

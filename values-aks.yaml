@@ -8,7 +8,10 @@ replicas:
   longworker: 1
   spinedispatcher: 1
   web: 1
-targetNamespace: frappe-base
+  frappesocketio: 1
+  #kafka: 0
+
+targetNamespace: frappe11
 
 # Target Environment - can be only beta-release or release
 branch: release
@@ -23,6 +26,35 @@ components:
   longworker: true
   spinedispatcher: true
   defaultworker: true
+  frappesocketio: true
+  #kafka: false
+
+hpa:
+  web:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
+  longworker:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
+  defaultworker:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
+  spinedispatcher:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
+  frappesocketio:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilization: 200 # As percentage
 
 # Allows for applications to define migration strategy deployed as initContainers
 # The commands array is mandatory if this is enabled.
@@ -37,29 +69,29 @@ migration:
 
 persistence:
   # only azure, gke and local supported
-  type: gke
+  type: azure
   # only 'file' or 'disk' supported for azure. Ignored for local. gce-pd and nfs supported for GKE.
-  subtype: nfs
+  subtype: file
   capacityInGi: 10
   # Storage account should already exist. Used only for type: azure
-  #storageaccount: erbk8sappall
+  storageaccount: erbk8sappall
   # File share by this name must already exist in the storage account mentioned above.
   # This file share should also already have blank files named apps.txt and currentsite.txt.
   # Also copy common_site_config.json file with configuration details.
   # Used only for type: azure
-  #sharename: frappe11-sites-share
+  sharename: frappe11-sites-share
   # base64 encoded storage account access key. Used only for type: azure
-  #storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
-  #location: sea
+  storageaccountkey: "V0FFOEdabWttZFRtWXE0cUF5TGd4azk1OGF4c1FzYUlSYlNQQWlJNk53L3IrbGZGbU40TG45ZERKZDhnQlZJalp3WWlCMFJOZ1dRN2lKUTFlN25JWnc9PQ=="
+  location: sea
   # Type & replication for persistent disk used in GKE - used only for type: gke, subtype: gce-pd
   #pdType: pd-standard
   #replicationType: none
   #pdName: er-bk8s-trun-site-pd
   # NFS Server Details along with path which should be used to hold site data - used only for type: gke, subtype: nfs
-  nfsServer: "10.68.0.2"
+  #nfsServer: "10.68.0.2"
   # Base path where the files will be saved. Release name directory is expected to exist in this path.
   # The actual files should exist within the directory named with release name.
-  nfsBasePath: /erbk8sappall/ntex-vol/non-prod-apps/er-bk8s-app-all/default
+  #nfsBasePath: /erbk8sappall/ntex-vol/non-prod-apps/er-bk8s-app-all/default
 
 redisserver:
   enabled: true
@@ -67,6 +99,19 @@ redisserver:
     repository: redis
     tag: alpine
     pullPolicy: IfNotPresent
+  bigcache:
+    enabled: true
+    clusterEnabled: false
+    #Will be used only if cluster is enabled.
+    replicaCount: 6
+    service:
+      type: ClusterIP
+      port: 13100
+    listenport: 6378
+    maxmemory: 2048mb
+    persistence:
+      enabled: false
+      storageCapacityinGi: 2
   cache:
     clusterEnabled: false
     #Will be used only if cluster is enabled.
@@ -156,9 +201,22 @@ fullnameOverride: ""
 service:
   type: ClusterIP
   port: 80
+  ## externalTrafficPolicy denotes if this Service desires to route external
+  ## traffic to node-local or cluster-wide endpoints. "Local" preserves the
+  ## client source IP and avoids a second hop for LoadBalancer and Nodeport
+  ## type services, but risks potentially imbalanced traffic spreading.
+  ## "Cluster" obscures the client source IP and may cause a second hop to
+  ## another node, but should have good overall load-spreading.
+  externalTrafficPolicy: Cluster
+  # Only applies to Service Type: "LoadBalancer". LoadBalancer will get
+  # created with the IP specified in this field. This feature depends on
+  # whether the underlying cloud-provider supports specifying the loadBalancerIP
+  # when a load balancer is created. This field will be ignored if the
+  # cloud-provider does not support the feature.
+  loadBalancerIP: ""
 
 db:
-  hostIP: 10.75.0.97
+  hostIP: 10.175.0.97
   port: 3306
   # Should be base64 encoded value of the actual password
   # encoded Value for 'Ntex@123'
@@ -166,10 +224,8 @@ db:
 
 web:
   gunicorn:
-    connections_per_worker: 200
-    workers: 4
-
-spine:
+    connections_per_worker: 25
+    workers: 2
 
 ## Optional /etc/hosts contents
 etchosts:
@@ -179,7 +235,7 @@ etchosts:
   - ip: 10.210.2.21
     hostnames:
       - release-spine.ntex.com
-  - ip: 10.75.0.97
+  - ip: 10.160.0.23
     hostnames:
       - beta-release-db.ntex.com
       - release-db.ntex.com
@@ -192,6 +248,34 @@ etchosts:
   #   hostnames:
   #     - release-db.ntex.com
 
+# Used only when kafka component is enabled.
+kafka:
+  zookeeper:
+    persistence:
+      enabled: true
+      subtype: nfs
+      capacityInGi: 8
+      pdName: "zk-pd"
+      annotations: {}
+      accessModes:
+        - "ReadWriteOnce"
+  persistence:
+      enabled: true
+      subtype: nfs
+      pdName: "kafka-pd"
+      capacityInGi: 100
+      annotations: {}
+      accessModes:
+        - "ReadWriteOnce"
+  externalAccess:
+    enabled: false
+    externalIPs: []
+  # base64 encoded passwords for broker authentication and interbroker authentication.
+  brokerauth: bnRleEAxMjM=
+  interbrokerauth: bnRleEAxMjM=
+  heapOpts: "-Xmx1024m -Xms1024m"
+  options: ""
+
 site:
   # Must be base64 encoded value for administrator password for the newly created site.
   # encoded value for Nt3x!@#
@@ -199,23 +283,22 @@ site:
   dbname: frappe11db
 
 ingress:
-  enabled: false
-  annotations:
-    {}
+  enabled: true
+  annotations: {}
     # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
+    # service.beta.kubernetes.io/azure-load-balancer-internal: "true"
   hosts:
-    - host: chart-example.local
-      paths: []
+    - host: elasticrun.in
+      paths: ["/"]
+  tls: #[]
+    - secretName: erun-ssl-cert
+      hosts:
+        - elasticrun.in
 
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+# We usually recommend not to specify default resources and to leave this as a conscious
+# choice for the user. This also increases chances charts run on environments with little
+# resources, such as Minikube. If you do want to specify resources, uncomment the following
+# lines, adjust them as necessary, and remove the curly braces after 'resources:'.
 resources: #{}
   web: #{}
     limits:
@@ -252,13 +335,20 @@ resources: #{}
     requests:
       cpu: 100m
       memory: 128Mi
-  logcollector: #{}
+  frappesocketio: #{}
     limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
       cpu: 100m
       memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+  logcollector: #{}
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
   monitor: #{}
     limits:
       cpu: 100m
@@ -267,12 +357,23 @@ resources: #{}
       cpu: 25m
       memory: 32Mi
   cache: #{}
+    # memory limits for cache should be enough to accomodate
+    # maxmemory configuration in redisserver above.
     limits:
       cpu: 100m
       memory: 128Mi
     requests:
       cpu: 25m
       memory: 32Mi
+  bigcache:
+    # memory limits for cache should be enough to accomodate
+    # maxmemory configuration in redisserver above.
+    limits:
+      cpu: 250m
+      memory: 2Gi
+    requests:
+      cpu: 50m
+      memory: 256Mi
   queue: #{}
     limits:
       cpu: 100m
@@ -299,3 +400,4 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+

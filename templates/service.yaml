@@ -82,7 +82,7 @@ spec:
   - protocol: TCP
     port: {{ .Values.redisserver.queue.service.port | default 11000 }}
     targetPort: {{ .Values.redisserver.queue.listenport }}
-  type: {{ .Values.redisserver.cache.service.type }}
+  type: {{ .Values.redisserver.queue.service.type }}
 ---
 apiVersion: v1
 kind: Service

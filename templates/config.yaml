@@ -338,3 +338,108 @@ data:
       "mailReceiver":["ajit.pendse@elastic.run", "nikhil.sharma@elastic.run"]
       }'
 {{ end }}
+{{ if .Values.components.kafka }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-kafka-jaas-conf
+  namespace: {{ .Values.targetNamespace }}
+data:
+  kafka_jaas.conf: |-
+    KafkaClient {
+      org.apache.kafka.common.security.plain.PlainLoginModule required
+      username="erkafkauser"
+      password="ntex@123";
+    };
+    KafkaServer {
+      org.apache.kafka.common.security.plain.PlainLoginModule required
+      username="admin"
+      password="ntex@123"
+      user_admin="ntex@123"
+      user_erkafkauser="ntex@123";
+      org.apache.kafka.common.security.scram.ScramLoginModule required;
+    };
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-kafka-jmx-configuration
+  namespace: {{ .Values.targetNamespace }}
+data:
+  jmx-kafka-prometheus.yml: |+
+    jmxUrl: service:jmx:rmi:///jndi/rmi://127.0.0.1:5555/jmxrmi
+    lowercaseOutputName: true
+    lowercaseOutputLabelNames: true
+    ssl: false
+    
+    whitelistObjectNames: ["kafka.controller:*","kafka.server:*","java.lang:*","kafka.network:*","kafka.log:*"]
+    
+    rules:
+      - pattern: kafka.controller<type=(ControllerChannelManager), name=(QueueSize), broker-id=(\d+)><>(Value)
+        name: kafka_controller_$1_$2_$4
+        labels:
+          broker_id: "$3"
+      - pattern: kafka.controller<type=(ControllerChannelManager), name=(TotalQueueSize)><>(Value)
+        name: kafka_controller_$1_$2_$3
+      - pattern: kafka.controller<type=(KafkaController), name=(.+)><>(Value)
+        name: kafka_controller_$1_$2_$3
+      - pattern: kafka.controller<type=(ControllerStats), name=(.+)><>(Count)
+        name: kafka_controller_$1_$2_$3
+      - pattern: kafka.server<type=(ReplicaFetcherManager), name=(.+), clientId=(.+)><>(Value)
+        name: kafka_server_$1_$2_$4
+        labels:
+          client_id: "$3"
+      - pattern : kafka.network<type=(Processor), name=(IdlePercent), networkProcessor=(.+)><>(Value)
+        name: kafka_network_$1_$2_$4
+        labels:
+          network_processor: $3
+      - pattern : kafka.network<type=(RequestMetrics), name=(RequestsPerSec), request=(.+)><>(Count)
+        name: kafka_network_$1_$2_$4
+        labels:
+          request: $3
+      - pattern: kafka.server<type=(.+), name=(.+), topic=(.+)><>(Count|OneMinuteRate)
+        name: kafka_server_$1_$2_$4
+        labels:
+          topic: $3
+      - pattern: kafka.server<type=(DelayedOperationPurgatory), name=(.+), delayedOperation=(.+)><>(Value)
+        name: kafka_server_$1_$2_$3_$4
+      - pattern: kafka.server<type=(.+), name=(.+)><>(Count|Value|OneMinuteRate)
+        name: kafka_server_$1_total_$2_$3
+      - pattern: kafka.server<type=(.+)><>(queue-size)
+        name: kafka_server_$1_$2
+      - pattern: java.lang<type=(.+), name=(.+)><(.+)>(\w+)
+        name: java_lang_$1_$4_$3_$2
+      - pattern: java.lang<type=(.+), name=(.+)><>(\w+)
+        name: java_lang_$1_$3_$2
+      - pattern : java.lang<type=(.*)>
+      - pattern: kafka.log<type=(.+), name=(.+), topic=(.+), partition=(.+)><>Value
+        name: kafka_log_$1_$2
+        labels:
+          topic: $3
+          partition: $4
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-kafka-scripts
+  namespace: {{ .Values.targetNamespace }}
+data:
+  setup.sh: |-
+    #!/bin/bash
+
+    HOSTNAME=$(hostname -s)
+    ID=${HOSTNAME:(-1)}
+
+    # Configure external ip and port
+    #export EXTERNAL_ACCESS_IP=$(echo '[10.70.0.200 10.70.0.201 10.70.0.202]' | tr -d '[]' | cut -d ' ' -f "$(($ID + 1))")
+    #export EXTERNAL_ACCESS_PORT=19092
+
+    # Configure Kafka internal and external listeners
+    export KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT
+    export KAFKA_CFG_LISTENERS=INTERNAL://:9092
+    export KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+    export KAFKA_CFG_ADVERTISED_LISTENERS="INTERNAL://${MY_POD_NAME}.er-spine-kafka-headless.spine.svc.cluster.local:9092"
+
+    exec /entrypoint.sh /run.sh
+{{ end }}
