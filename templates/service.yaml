@@ -23,7 +23,7 @@ spec:
     app.kubernetes.io/name: {{ include "er-frappe.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/role: "web"
-{{ if .Values.components.socketio }}
+{{ if .Values.components.frappesocketio }}
 ---
 apiVersion: v1
 kind: Service
@@ -99,4 +99,21 @@ spec:
     port: {{ .Values.redisserver.socketio.service.port | default 12000 }}
     targetPort: {{ .Values.redisserver.socketio.listenport }}
   type: {{ .Values.redisserver.socketio.service.type }}
+{{ if .Values.redisserver.bigcache.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-bigcache-ntex-com
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+spec:
+  selector:
+    app: {{ .Release.Name | replace " " "-" }}-redis-bigcache
+  ports:
+  - protocol: TCP
+    port: {{ .Values.redisserver.bigcache.service.port | default 13100 }}
+    targetPort: {{ .Values.redisserver.bigcache.listenport }}
+  type: {{ .Values.redisserver.bigcache.service.type }}
 {{ end }}

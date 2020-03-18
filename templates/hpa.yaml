@@ -1,0 +1,80 @@
+{{ if .Values.hpa.web.enabled }}
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "er-frappe.fullname" . }}-hpa
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  maxReplicas: {{ .Values.hpa.web.maxReplicas }} # define max replica count
+  minReplicas: {{ .Values.hpa.web.minReplicas }}   # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ include "er-frappe.fullname" . }}
+  targetCPUUtilizationPercentage: {{ .Values.hpa.web.targetCPUUtilization }} # target CPU utilization
+{{ end }}
+{{ if .Values.hpa.longworker.enabled }}
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "er-frappe.fullname" . }}-long-worker-hpa
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  maxReplicas: {{ .Values.hpa.longworker.maxReplicas }} # define max replica count
+  minReplicas: {{ .Values.hpa.longworker.minReplicas }}   # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ include "er-frappe.fullname" . }}-long-worker
+  targetCPUUtilizationPercentage: {{ .Values.hpa.longworker.targetCPUUtilization }} # target CPU utilization
+{{ end }}
+{{ if .Values.hpa.defaultworker.enabled }}
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "er-frappe.fullname" . }}-default-worker-hpa
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  maxReplicas: {{ .Values.hpa.defaultworker.maxReplicas }} # define max replica count
+  minReplicas: {{ .Values.hpa.defaultworker.minReplicas }}   # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ include "er-frappe.fullname" . }}-default-worker
+  targetCPUUtilizationPercentage: {{ .Values.hpa.defaultworker.targetCPUUtilization }} # target CPU utilization
+{{ end }}
+{{ if .Values.hpa.spinedispatcher.enabled }}
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "er-frappe.fullname" . }}-spine-dispatcher-hpa
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  maxReplicas: {{ .Values.hpa.spinedispatcher.maxReplicas }} # define max replica count
+  minReplicas: {{ .Values.hpa.spinedispatcher.minReplicas }}   # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ include "er-frappe.fullname" . }}-spine-dispatcher
+  targetCPUUtilizationPercentage: {{ .Values.hpa.spinedispatcher.targetCPUUtilization }} # target CPU utilization
+{{ end }}
+{{ if .Values.hpa.frappesocketio.enabled }}
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "er-frappe.fullname" . }}-socketio-hpa
+  namespace: {{ .Values.targetNamespace }}
+spec:
+  maxReplicas: {{ .Values.hpa.frappesocketio.maxReplicas }} # define max replica count
+  minReplicas: {{ .Values.hpa.frappesocketio.minReplicas }}   # define min replica count
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ include "er-frappe.fullname" . }}-socketio
+  targetCPUUtilizationPercentage: {{ .Values.hpa.frappesocketio.targetCPUUtilization }} # target CPU utilization
+{{ end }}

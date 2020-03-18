@@ -30,10 +30,10 @@ metadata:
               fieldPath: status.podIP
         stdin: true
         tty: true
-        resources: {}
-          # limits:
-          #   memory: "256Mi"
-          #   cpu: "100m"
+        {{ if .Values.resources.cache }}
+        resources:
+            {{- toYaml .Values.resources.cache | nindent 12 }}
+        {{- end }}
         ports:
           - containerPort: {{ .Values.redisserver.cache.listenport  | default 6379}}
             name: client
@@ -85,7 +85,7 @@ metadata:
         app: {{ .Release.Name | replace " " "-" }}-redis-queue
     spec:
       containers:
-      - name: redis-cache
+      - name: redis-queue
         image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
         imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
         command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_queue.conf"]
@@ -96,10 +96,10 @@ metadata:
               fieldPath: status.podIP
         stdin: true
         tty: true
-        resources: {}
-          # limits:
-          #   memory: "256Mi"
-          #   cpu: "100m"
+        {{ if .Values.resources.queue }}
+        resources:
+            {{- toYaml .Values.resources.queue | nindent 12 }}
+        {{- end }}
         ports:
           - containerPort: {{ .Values.redisserver.queue.listenport  | default 6379}}
             name: client
@@ -162,10 +162,10 @@ metadata:
               fieldPath: status.podIP
         stdin: true
         tty: true
-        resources: {}
-          # limits:
-          #   memory: "256Mi"
-          #   cpu: "100m"
+        {{ if .Values.resources.socketio }}
+        resources:
+            {{- toYaml .Values.resources.socketio | nindent 12 }}
+        {{- end }}
         ports:
           - containerPort: {{ .Values.redisserver.socketio.listenport  | default 6379}}
             name: client
@@ -197,4 +197,73 @@ metadata:
       - name: data
         emptyDir: {}
       {{ end }}
+  {{- if .Values.redisserver.bigcache.enabled }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-big-cache
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end -}}
+{{- "spec:" | nindent 0 }}
+  serviceName: {{ .Release.Name | replace " " "-" }}
+  replicas: {{ if .Values.redisserver.bigcache.clusterEnabled }} {{ .Values.redisserver.bigcache.replicaCount | default 6 -}}{{ else }} 1{{ end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name | replace " " "-" }}-redis-bigcache
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | replace " " "-" }}-redis-bigcache
+    spec:
+      containers:
+      - name: redis-bigcache
+        image: {{ .Values.redisserver.image.repository }}:{{ .Values.redisserver.image.tag }}
+        imagePullPolicy: {{ .Values.redisserver.image.pullPolicy | default "Always" }}
+        command: ["/etc/conf.d/update-node.sh", "redis-server", "/etc/conf.d/redis_bigcache.conf"]
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        stdin: true
+        tty: true
+        {{ if .Values.resources.bigcache }}
+        resources:
+            {{- toYaml .Values.resources.bigcache | nindent 12 }}
+        {{- end }}
+        ports:
+          - containerPort: {{ .Values.redisserver.bigcache.listenport  | default 6379}}
+            name: client
+          - containerPort: {{ add .Values.redisserver.bigcache.listenport 10000 }}
+            name: gossip
+        volumeMounts:
+        - mountPath: /etc/conf.d
+          name: er-redis-config
+          readOnly: true
+        - mountPath: /data
+          name: data
+          readOnly: false
+      restartPolicy: Always
+      volumes:
+      - name : er-redis-config
+        configMap:
+          name: {{ .Release.Name | replace " " "-" }}-redis-config
+          defaultMode: 0755
+      {{- if .Values.redisserver.bigcache.persistence.enabled | default false -}}
+  {{- "volumeClaimTemplates:" | nindent 2 }}
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.redisserver.bigcache.persistence.storageCapacityinGi  | default 2 -}}Gi
+      {{ else }}
+      - name: data
+        emptyDir: {}
+      {{ end }}
+  {{- end -}}
 {{- end -}}
+
