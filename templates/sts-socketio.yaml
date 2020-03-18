@@ -152,7 +152,7 @@ metadata:
                   key: admin.password
                   name: {{ .Release.Name }}-secrets
           resources:
-            {{- toYaml .Values.resources.socketio | nindent 12 -}}
+            {{- toYaml .Values.resources.frappe-socketio | nindent 12 -}}
           {{ "stdin: true" | nindent 10 }}
           tty: true
           volumeMounts:
