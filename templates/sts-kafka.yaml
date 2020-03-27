@@ -33,7 +33,7 @@ spec:
       initContainers:
         - name: volume-permissions
           image: docker.io/bitnami/minideb:buster
-          imagePullPolicy: "Always"
+          imagePullPolicy: "IfNotPresent"
           command: ["chown", "-R", "1001:1001", "/bitnami/zookeeper"]
           securityContext:
             runAsUser: 0
@@ -170,7 +170,7 @@ spec:
       initContainers:
         - name: volume-permissions
           image: docker.io/bitnami/minideb:buster
-          imagePullPolicy: "Always"
+          imagePullPolicy: "IfNotPresent"
           command: ["chown", "-R", "1001:1001", "/bitnami/kafka"]
           securityContext:
             runAsUser: 0
@@ -195,7 +195,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: KAFKA_CFG_ZOOKEEPER_CONNECT
-              value: {{ .Release.Name }}-zookeeper
+              value: {{ .Release.Name }}-zookeeper-ntex-com
             - name: KAFKA_PORT_NUMBER
               value: "9092"
             - name: JMX_PORT
