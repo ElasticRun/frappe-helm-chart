@@ -138,9 +138,7 @@ spec:
     port: 2181
     targetPort: client
   type: ClusterIP
-{{ end }}
 
-{{ if .Values.components.kafka }}
 ---
 apiVersion: v1
 kind: Service
