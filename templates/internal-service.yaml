@@ -1,0 +1,30 @@
+{{ if .Values.service.includeInternalLB }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "er-frappe.fullname" . }}-internal
+  namespace: {{ .Values.targetNamespace }}
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    cloud.google.com/load-balancer-type: "Internal"
+{{ toYaml .Values.service.annotations | indent 4 }}
+    {{- if .Values.service.aksInternalStaticIPResourceGroup }}
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: {{ .Values.service.aksInternalStaticIPResourceGroup }}
+    {{ end -}}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
+  loadBalancerIP: {{ .Values.service.internalLoadBalancerIP }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: nginx
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/role: "web"
+{{ end }}

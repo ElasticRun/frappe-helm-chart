@@ -4,6 +4,11 @@ kind: Service
 metadata:
   name: {{ include "er-frappe.fullname" . }}
   namespace: {{ .Values.targetNamespace }}
+  annotations:
+{{ toYaml .Values.service.annotations | indent 4 }}
+    {{- if .Values.service.aksStaticIPResourceGroup }}
+      service.beta.kubernetes.io/azure-load-balancer-resource-group: {{ .Values.service.aksStaticIPResourceGroup }}
+    {{ end -}}
   labels:
 {{ include "er-frappe.labels" . | indent 4 }}
 spec:

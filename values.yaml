@@ -199,6 +199,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 service:
+  annotations: {}
   type: ClusterIP
   port: 80
   ## externalTrafficPolicy denotes if this Service desires to route external
@@ -213,7 +214,11 @@ service:
   # whether the underlying cloud-provider supports specifying the loadBalancerIP
   # when a load balancer is created. This field will be ignored if the
   # cloud-provider does not support the feature.
-  loadBalancerIP: ""
+  loadBalancerIP: "20.34.115.116"
+  includeInternalLB: true
+  internalLoadBalancerIP: "10.175.0.3"
+  aksStaticIPResourceGroup: "test-rsg"
+  aksInternalStaticIPResourceGroup: "test-internal-rsg"
 
 db:
   hostIP: 10.75.0.97
