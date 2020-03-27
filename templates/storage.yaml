@@ -184,7 +184,7 @@ spec:
   capacity:
     storage: {{ .Values.kafka.zookeeper.persistence.capacityInGi }}Gi
   accessModes:
-    - ReadWriteMany
+    {{ toYaml .Values.kafka.zookeeper.persistence.accessModes }}
   storageClassName: {{ .Release.Name }}-zk-sc
   {{ if eq .Values.kafka.zookeeper.persistence.subtype "gce-pd" }}
   gcePersistentDisk:
@@ -228,13 +228,13 @@ allowVolumeExpansion: true
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: {{ .Release.Name }}-zk-pv
+  name: {{ .Release.Name }}-kafka-pv
   namespace: {{ .Values.targetNamespace }}
 spec:
   capacity:
     storage: {{ .Values.kafka.persistence.capacityInGi }}Gi
   accessModes:
-    - ReadWriteMany
+    {{ toYaml .Values.kafka.persistence.accessModes }}
   storageClassName: {{ .Release.Name }}-kafka-sc
   {{ if eq .Values.kafka.persistence.subtype "gce-pd" }}
   gcePersistentDisk:
