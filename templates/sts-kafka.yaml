@@ -4,6 +4,9 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ .Release.Name }}-zookeeper
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
   labels:
 {{ include "er-frappe.labels" . | indent 4 }}
 spec:
@@ -30,7 +33,7 @@ spec:
       initContainers:
         - name: volume-permissions
           image: docker.io/bitnami/minideb:buster
-          imagePullPolicy: "Always"
+          imagePullPolicy: "IfNotPresent"
           command: ["chown", "-R", "1001:1001", "/bitnami/zookeeper"]
           securityContext:
             runAsUser: 0
@@ -77,7 +80,7 @@ spec:
             - name: ZOO_LISTEN_ALLIPS_ENABLED
               value: "yes"
             - name: ZOO_SERVERS
-              value: {{ .Release.Name }}-zookeeper-0.{{ .Release.Name }}-zookeeper-headless.{{ .Values.targetNamespace }}.svc.cluster.local:2888:3888 
+              value: {{ .Release.Name }}-zookeeper-0.{{ .Release.Name }}-zookeeper-headless.{{ .Values.targetNamespace }}.svc.cluster.local:2888:3888
             - name: ZOO_ENABLE_AUTH
               value: "no"
             - name: ZOO_HEAP_SIZE
@@ -136,7 +139,7 @@ kind: StatefulSet
 metadata:
   name: {{ .Release.Name }}-kafka
   labels:
-    {{ include "er-frappe.labels" . | indent 4 }}
+{{ include "er-frappe.labels" . | indent 4 }}
 spec:
   selector:
     matchLabels:
@@ -154,7 +157,7 @@ spec:
         app.kubernetes.io/name: {{ include "er-frappe.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/role: "kafka"
-    spec:      
+    spec:
       securityContext:
         fsGroup: 1001
         runAsUser: 1001
@@ -167,7 +170,7 @@ spec:
       initContainers:
         - name: volume-permissions
           image: docker.io/bitnami/minideb:buster
-          imagePullPolicy: "Always"
+          imagePullPolicy: "IfNotPresent"
           command: ["chown", "-R", "1001:1001", "/bitnami/kafka"]
           securityContext:
             runAsUser: 0
@@ -192,7 +195,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: KAFKA_CFG_ZOOKEEPER_CONNECT
-              value: {{ .Release.Name }}-zookeeper
+              value: {{ .Release.Name }}-zookeeper-ntex-com
             - name: KAFKA_PORT_NUMBER
               value: "9092"
             - name: JMX_PORT
@@ -315,7 +318,7 @@ spec:
           ports:
             - name: metrics
               containerPort: 5556
-          resources: 
+          resources:
             limits: {}
             requests: {}
           volumeMounts:
@@ -348,7 +351,7 @@ spec:
         resources:
           requests:
             storage: "{{ .Values.kafka.persistence.capacityInGi }}Gi"
-        storageClassName: {{ .Values.kafka.persistence.storageClassName }}
+        storageClassName: {{ .Release.Name }}-kafka-sc
   {{ else }}
         - name: data
           emptyDir: {}

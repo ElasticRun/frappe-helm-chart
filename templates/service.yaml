@@ -123,3 +123,41 @@ spec:
   type: {{ .Values.redisserver.bigcache.service.type }}
 {{ end }}
 {{ end }}
+
+{{ if .Values.components.kafka }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-zookeeper-ntex-com
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/role: "zookeeper"
+  ports:
+  - protocol: TCP
+    port: 2181
+    targetPort: client
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name | replace " " "-" }}-kafka-headless
+  {{- if .Values.targetNamespace }}
+  namespace: {{ .Values.targetNamespace }}
+  {{- end }}
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/role: "kafka"
+  ports: null
+  type: ClusterIP
+{{ end }}

@@ -372,9 +372,9 @@ data:
     lowercaseOutputName: true
     lowercaseOutputLabelNames: true
     ssl: false
-    
+
     whitelistObjectNames: ["kafka.controller:*","kafka.server:*","java.lang:*","kafka.network:*","kafka.log:*"]
-    
+
     rules:
       - pattern: kafka.controller<type=(ControllerChannelManager), name=(QueueSize), broker-id=(\d+)><>(Value)
         name: kafka_controller_$1_$2_$4
@@ -439,7 +439,7 @@ data:
     export KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT
     export KAFKA_CFG_LISTENERS=INTERNAL://:9092
     export KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
-    export KAFKA_CFG_ADVERTISED_LISTENERS="INTERNAL://${MY_POD_NAME}.er-spine-kafka-headless.spine.svc.cluster.local:9092"
+    export KAFKA_CFG_ADVERTISED_LISTENERS="INTERNAL://${MY_POD_NAME}.{{ .Release.Name | replace " " "-" }}-kafka-headless.{{.Values.targetNamespace}}.svc.cluster.local:9092"
 
     exec /entrypoint.sh /run.sh
 {{ end }}
