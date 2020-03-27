@@ -351,7 +351,7 @@ spec:
         resources:
           requests:
             storage: "{{ .Values.kafka.persistence.capacityInGi }}Gi"
-        storageClassName: {{ .Values.kafka.persistence.storageClassName }}
+        storageClassName: {{ .Release.Name }}-kafka-sc
   {{ else }}
         - name: data
           emptyDir: {}

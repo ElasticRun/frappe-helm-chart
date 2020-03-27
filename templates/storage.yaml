@@ -228,7 +228,7 @@ allowVolumeExpansion: true
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: {{ .Release.Name }}-zk-pv
+  name: {{ .Release.Name }}-kafka-pv
   namespace: {{ .Values.targetNamespace }}
 spec:
   capacity:
