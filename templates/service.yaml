@@ -170,7 +170,8 @@ spec:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/role: "kafka-monitor"
   ports:
-  - protocol: TCP
+  - name: http
+    protocol: TCP
     port: {{ .Values.kafka.monitor.port }}
     targetPort: {{ .Values.kafka.monitor.port }}
   type: ClusterIP

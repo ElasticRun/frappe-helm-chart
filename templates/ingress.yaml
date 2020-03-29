@@ -61,6 +61,6 @@ spec:
           - path: /
             backend:
               serviceName: {{ $.Release.Name }}-kafka-monitor
-              servicePort: client
+              servicePort: http
     {{- end }}
 {{- end }}
