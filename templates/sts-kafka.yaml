@@ -391,20 +391,20 @@ spec:
           - name: KAFKA_KEYSTORE_FILE
             value: "kafka.keystore.jks"
           ports:
-            - name: client
-              containerPort: {{ .Values.kafka.monitor.port }}
-              protocol: TCP
+          - name: client
+            containerPort: {{ .Values.kafka.monitor.port }}
+            protocol: TCP
           livenessProbe:
             httpGet:
               path: "/actuator/health"
-              port: http
+              port: client
             initialDelaySeconds: 180
             periodSeconds: 30
             timeoutSeconds: 10
           readinessProbe:
             httpGet:
               path: "/actuator/health"
-              port: http
+              port: client
             initialDelaySeconds: 20
             periodSeconds: 5
             timeoutSeconds: 10
