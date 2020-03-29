@@ -356,4 +356,56 @@ spec:
         - name: data
           emptyDir: {}
   {{ end }}
+---
+apiVersion: apps/v1beta2
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-kafka-monitor
+  labels:
+{{ include "er-frappe.labels" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/role: "kafka-monitor"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "er-frappe.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/role: "kafka-monitor"
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-kafka-monitor
+          image: "obsidiandynamics/kafdrop"
+          imagePullPolicy: "IfNotPresent"
+          env:
+          - name: KAFKA_BROKERCONNECT
+            value: "{{ .Release.Name }}-kafka-0.{{ .Release.Name | replace " " "-" }}-kafka-headless.{{.Values.targetNamespace}}.svc.cluster.local:9092"
+          - name: KAFKA_PROPERTIES_FILE
+            value: "kafka.properties"
+          - name: KAFKA_TRUSTSTORE_FILE
+            value: "kafka.truststore.jks"
+          - name: KAFKA_KEYSTORE_FILE
+            value: "kafka.keystore.jks"
+          ports:
+            - name: client
+              containerPort: {{ .Values.kafka.monitor.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: "/actuator/health"
+              port: http
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: "/actuator/health"
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 10
 {{ end }}
