@@ -55,12 +55,5 @@ spec:
               serviceName: {{ $fullName }}-socketio
               servicePort: http
         {{ end }}
-    - host: {{ $.Release.Name }}-kafka-monitor.{{ .host }}
-      http:
-        paths:
-          - path: /
-            backend:
-              serviceName: {{ $.Release.Name }}-kafka-monitor
-              servicePort: http
     {{- end }}
 {{- end }}

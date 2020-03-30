@@ -156,23 +156,4 @@ spec:
   ports: null
   type: ClusterIP
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name | replace " " "-" }}-kafka-monitor
-  {{- if .Values.targetNamespace }}
-  namespace: {{ .Values.targetNamespace }}
-  {{- end }}
-spec:
-  selector:
-    app.kubernetes.io/name: {{ include "er-frappe.name" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/role: "kafka-monitor"
-  ports:
-  - name: http
-    protocol: TCP
-    port: {{ .Values.kafka.monitor.port }}
-    targetPort: {{ .Values.kafka.monitor.port }}
-  type: ClusterIP
 {{ end }}
