@@ -160,4 +160,5 @@ spec:
     app.kubernetes.io/role: "kafka"
   ports: null
   type: ClusterIP
+
 {{ end }}

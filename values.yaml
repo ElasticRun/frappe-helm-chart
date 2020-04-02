@@ -31,27 +31,27 @@ components:
 
 hpa:
   web:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilization: 200 # As percentage
   longworker:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilization: 200 # As percentage
   defaultworker:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilization: 200 # As percentage
   spinedispatcher:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilization: 200 # As percentage
   frappesocketio:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilization: 200 # As percentage
