@@ -4,13 +4,14 @@ kind: Service
 metadata:
   name: {{ include "er-frappe.fullname" . }}
   namespace: {{ .Values.targetNamespace }}
-  annotations:
-{{ toYaml .Values.service.annotations | indent 4 }}
-    {{- if .Values.service.aksStaticIPResourceGroup }}
-      service.beta.kubernetes.io/azure-load-balancer-resource-group: {{ .Values.service.aksStaticIPResourceGroup }}
-    {{ end -}}
   labels:
 {{ include "er-frappe.labels" . | indent 4 }}
+  annotations:
+    {{- if .Values.service.aksStaticIPResourceGroup }}
+      service.beta.kubernetes.io/azure-load-balancer-resource-group: {{ .Values.service.aksStaticIPResourceGroup }}
+    {{ else }}
+      {{ toYaml .Values.service.annotations | indent 4 }}
+    {{ end }}
 spec:
   type: {{ .Values.service.type }}
 {{- if or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort") }}

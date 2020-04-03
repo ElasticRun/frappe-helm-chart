@@ -10,10 +10,12 @@ metadata:
   annotations:
     service.beta.kubernetes.io/azure-load-balancer-internal: "true"
     cloud.google.com/load-balancer-type: "Internal"
-{{ toYaml .Values.service.annotations | indent 4 }}
+    {{- if .Values.service.annotations }}
+    {{ toYaml .Values.service.annotations | indent 4 }}
+    {{ end }}
     {{- if .Values.service.aksInternalStaticIPResourceGroup }}
     service.beta.kubernetes.io/azure-load-balancer-resource-group: {{ .Values.service.aksInternalStaticIPResourceGroup }}
-    {{ end -}}
+    {{ end }}
 spec:
   type: LoadBalancer
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
