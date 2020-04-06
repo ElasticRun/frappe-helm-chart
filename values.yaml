@@ -215,7 +215,7 @@ service:
   # when a load balancer is created. This field will be ignored if the
   # cloud-provider does not support the feature.
   loadBalancerIP: "20.34.115.116"
-  includeInternalLB: true
+  includeInternalLB: false
   internalLoadBalancerIP: "10.175.0.3"
   aksStaticIPResourceGroup: "test-rsg"
   aksInternalStaticIPResourceGroup: "test-internal-rsg"
