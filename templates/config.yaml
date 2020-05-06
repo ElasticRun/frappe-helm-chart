@@ -330,12 +330,12 @@ data:
             print("error while sending mail")
   sendmail.conf: |-
     '{
-      "mailAuthUser":"tech@elastic.run",
-      "mailAuthPass":"PCavs401",
-      "mailServer":"smtp-relay.gmail.com",
-      "mailServerPort":"587",
-      "mailSender":"tech.support@elastic.run",
-      "mailReceiver":["ajit.pendse@elastic.run", "nikhil.sharma@elastic.run"]
+      "mailAuthUser":"UPDATEME",
+      "mailAuthPass":"UPDATEME",
+      "mailServer":"UPDATEME",
+      "mailServerPort":"UPDATEME",
+      "mailSender":"UPDATEME",
+      "mailReceiver":["UPDATEME", "UPDATEME"]
       }'
 {{ end }}
 {{ if .Values.components.kafka }}
@@ -349,15 +349,15 @@ data:
   kafka_jaas.conf: |-
     KafkaClient {
       org.apache.kafka.common.security.plain.PlainLoginModule required
-      username="erkafkauser"
-      password="ntex@123";
+      username="kafkauser"
+      password="abc@123";
     };
     KafkaServer {
       org.apache.kafka.common.security.plain.PlainLoginModule required
       username="admin"
-      password="ntex@123"
-      user_admin="ntex@123"
-      user_erkafkauser="ntex@123";
+      password="abc@123"
+      user_admin="abc@123"
+      user_kafkauser="abc@123";
       org.apache.kafka.common.security.scram.ScramLoginModule required;
     };
 ---

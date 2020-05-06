@@ -3,14 +3,7 @@
 # Declare variables to be passed into your templates.
 
 # Number of PODs to be started
-replicas:
-  defaultworker: 1
-  longworker: 1
-  spinedispatcher: 1
-  web: 1
-  frappesocketio: 1
-  #kafka: 0
-
+replicaCount: 1
 targetNamespace: frappe11
 
 # Target Environment - can be only beta-release or release
@@ -25,36 +18,6 @@ components:
   scheduler: true
   longworker: true
   spinedispatcher: true
-  defaultworker: true
-  frappesocketio: true
-  #kafka: false
-
-hpa:
-  web:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 3
-    targetCPUUtilization: 200 # As percentage
-  longworker:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 3
-    targetCPUUtilization: 200 # As percentage
-  defaultworker:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 3
-    targetCPUUtilization: 200 # As percentage
-  spinedispatcher:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 3
-    targetCPUUtilization: 200 # As percentage
-  frappesocketio:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 3
-    targetCPUUtilization: 200 # As percentage
 
 # Allows for applications to define migration strategy deployed as initContainers
 # The commands array is mandatory if this is enabled.
@@ -99,19 +62,6 @@ redisserver:
     repository: redis
     tag: alpine
     pullPolicy: IfNotPresent
-  bigcache:
-    enabled: true
-    clusterEnabled: false
-    #Will be used only if cluster is enabled.
-    replicaCount: 6
-    service:
-      type: ClusterIP
-      port: 13100
-    listenport: 6378
-    maxmemory: 2048mb
-    persistence:
-      enabled: false
-      storageCapacityinGi: 2
   cache:
     clusterEnabled: false
     #Will be used only if cluster is enabled.
@@ -199,26 +149,8 @@ nameOverride: ""
 fullnameOverride: ""
 
 service:
-  annotations: {}
   type: ClusterIP
   port: 80
-  ## externalTrafficPolicy denotes if this Service desires to route external
-  ## traffic to node-local or cluster-wide endpoints. "Local" preserves the
-  ## client source IP and avoids a second hop for LoadBalancer and Nodeport
-  ## type services, but risks potentially imbalanced traffic spreading.
-  ## "Cluster" obscures the client source IP and may cause a second hop to
-  ## another node, but should have good overall load-spreading.
-  externalTrafficPolicy: Cluster
-  # Only applies to Service Type: "LoadBalancer". LoadBalancer will get
-  # created with the IP specified in this field. This feature depends on
-  # whether the underlying cloud-provider supports specifying the loadBalancerIP
-  # when a load balancer is created. This field will be ignored if the
-  # cloud-provider does not support the feature.
-  loadBalancerIP: "20.34.115.116"
-  includeInternalLB: false
-  internalLoadBalancerIP: "10.175.0.3"
-  aksStaticIPResourceGroup: "test-rsg"
-  aksInternalStaticIPResourceGroup: "test-internal-rsg"
 
 db:
   hostIP: 10.75.0.97
@@ -229,8 +161,8 @@ db:
 
 web:
   gunicorn:
-    connections_per_worker: 25
-    workers: 2
+    connections_per_worker: 200
+    workers: 4
 
 ## Optional /etc/hosts contents
 etchosts:
@@ -253,34 +185,6 @@ etchosts:
   #   hostnames:
   #     - release-db.ntex.com
 
-# Used only when kafka component is enabled.
-kafka:
-  zookeeper:
-    persistence:
-      enabled: true
-      subtype: nfs
-      capacityInGi: 8
-      pdName: "zk-pd"
-      annotations: {}
-      accessModes:
-        - "ReadWriteOnce"
-  persistence:
-      enabled: true
-      subtype: nfs
-      pdName: "kafka-pd"
-      capacityInGi: 100
-      annotations: {}
-      accessModes:
-        - "ReadWriteOnce"
-  externalAccess:
-    enabled: false
-    externalIPs: []
-  # base64 encoded passwords for broker authentication and interbroker authentication.
-  brokerauth: bnRleEAxMjM=
-  interbrokerauth: bnRleEAxMjM=
-  heapOpts: "-Xmx1024m -Xms1024m"
-  options: ""
-
 site:
   # Must be base64 encoded value for administrator password for the newly created site.
   # encoded value for Nt3x!@#
@@ -288,111 +192,32 @@ site:
   dbname: frappe11db
 
 ingress:
-  enabled: true
-  annotations: {}
+  enabled: false
+  annotations:
+    {}
     # kubernetes.io/ingress.class: nginx
-    # service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: elasticrun.in
-      paths: ["/"]
-  tls: #[]
-    - secretName: erun-ssl-cert
-      hosts:
-        - elasticrun.in
+    - host: chart-example.local
+      paths: []
 
-# We usually recommend not to specify default resources and to leave this as a conscious
-# choice for the user. This also increases chances charts run on environments with little
-# resources, such as Minikube. If you do want to specify resources, uncomment the following
-# lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-resources: #{}
-  web: #{}
-    limits:
-      cpu: 750m
-      memory: 1024Mi
-    requests:
-      cpu: 150m
-      memory: 128Mi
-  defaultworker: #{}
-    limits:
-      cpu: 750m
-      memory: 1024Mi
-    requests:
-      cpu: 150m
-      memory: 128Mi
-  longworker: #{}
-    limits:
-      cpu: 250m
-      memory: 512Mi
-    requests:
-      cpu: 50m
-      memory: 128Mi
-  scheduler: #{}
-    limits:
-      cpu: 300m
-      memory: 512Mi
-    requests:
-      cpu: 100m
-      memory: 128Mi
-  spinedispatcher: #{}
-    limits:
-      cpu: 500m
-      memory: 1024Mi
-    requests:
-      cpu: 100m
-      memory: 128Mi
-  frappesocketio: #{}
-    limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
-      cpu: 25m
-      memory: 32Mi
-  logcollector: #{}
-    limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
-      cpu: 25m
-      memory: 32Mi
-  monitor: #{}
-    limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
-      cpu: 25m
-      memory: 32Mi
-  cache: #{}
-    # memory limits for cache should be enough to accomodate
-    # maxmemory configuration in redisserver above.
-    limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
-      cpu: 25m
-      memory: 32Mi
-  bigcache:
-    # memory limits for cache should be enough to accomodate
-    # maxmemory configuration in redisserver above.
-    limits:
-      cpu: 250m
-      memory: 2Gi
-    requests:
-      cpu: 50m
-      memory: 256Mi
-  queue: #{}
-    limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
-      cpu: 25m
-      memory: 32Mi
-  socketio: #{}
-    limits:
-      cpu: 50m
-      memory: 128Mi
-    requests:
-      cpu: 25m
-      memory: 32Mi
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
 
 nodeSelector: {}
 
